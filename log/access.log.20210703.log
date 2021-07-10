@@ -1,0 +1,6 @@
+{"client_ip":"127.0.0.1","latency_time":867327,"level":"info","msg":"","req_method":"GET","req_uri":"/api/v1/user/profile","status_code":200,"time":"2021-07-03 11:23:55"}
+{"client_ip":"127.0.0.1","latency_time":975746,"level":"info","msg":"","req_method":"GET","req_uri":"/api/v1/user/profile","status_code":200,"time":"2021-07-03 11:24:22"}
+time="2021-07-03T11:24:22+08:00" level=info client_ip=127.0.0.1 latency_time="975.746µs" req_method=GET req_uri=/api/v1/user/profile status_code=200
+{"client_ip":"127.0.0.1","latency_time":930487,"level":"info","msg":"","req_method":"GET","req_uri":"/api/v1/user/profile","status_code":200,"time":"2021-07-03 11:33:08"}
+time="2021-07-03T11:33:08+08:00" level=info client_ip=127.0.0.1 latency_time="930.487µs" req_method=GET req_uri=/api/v1/user/profile status_code=200
+time="2021-07-04T12:13:18+08:00" level=info client_ip=127.0.0.1 latency_time=23.351199ms req_method=GET req_uri=/api/v1/station status_code=200
