@@ -1,0 +1,8 @@
+.env/
+.idea/
+/logs/*.log.*
+license/
+.DS_Store
+.vscode
+node_modules
+vendor
