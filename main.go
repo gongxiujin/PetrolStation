@@ -93,11 +93,10 @@ func main() {
 	router := gin.New()
 	router.Use(loggerMiddleware())
 	application.Logger = initLogger()
-	router.LoadHTMLGlob("templates/**/*")
 	application.DB = InitDb()
 	application.Redis = application.InitRedisClient()
 	router.GET("/api/auth", application.AuthLogin)
-	router.GET("/petrol/login", application.WebLogin)
+	router.POST("/api/login", application.WebLogin)
 	authRoute := router.Group("/api/v1/")
 	authRoute.Use(application.AuthenticationToken())
 	{

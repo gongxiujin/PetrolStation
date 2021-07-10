@@ -3,7 +3,7 @@ package application
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/360EntSecGroup-Skylar/excelize"
@@ -15,6 +15,7 @@ import (
 )
 
 const BlockSize = 32
+const Key = "561d1c4ce26e42189fdecafa15295c73"
 
 type GdApiRes struct {
 	Status    string `json:"status"`
@@ -38,14 +39,14 @@ func (m *GDApiError) Error() string {
 	return "gd api interface error"
 }
 
-func validateAuth(token string) bool {
-	return true
+func validateAuth(token string) (user Users, err error) {
+	return getUserByToken(token)
 }
 
 func AuthenticationToken() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		Token := context.Request.Header.Get("Token")
-		if Token == "" || !validateAuth(Token) {
+		if Token == "" {
 			context.AbortWithStatusJSON(http.StatusOK, map[string]interface{}{
 				"errno":   5001,
 				"result":  struct{}{},
@@ -53,8 +54,15 @@ func AuthenticationToken() gin.HandlerFunc {
 			})
 			return
 		}
-		var user Users
-		DB.First(&user, 1)
+		user, err := validateAuth(Token)
+		if err != nil {
+			context.AbortWithStatusJSON(http.StatusOK, map[string]interface{}{
+				"errno":   5001,
+				"result":  struct{}{},
+				"message": "Access denied",
+			})
+			return
+		}
 		if user.ID == 0 {
 			context.AbortWithStatusJSON(http.StatusOK, map[string]interface{}{
 				"errno":   5001,
@@ -142,47 +150,71 @@ func GetLocationByCoord(longitude, latitude float64) (country, province, city, d
 	return
 }
 
-func getUserToken(userId int) (token string, err error) {
-	content := []byte(fmt.Sprintf("%32d", userId))
-	key := []byte("561d1c4ce26e42189fdecafa15295c73")
+func getUserToken(userId int) (string, error) {
+	key := []byte(Key)
+	origData := []byte(fmt.Sprintf("%32d", userId))
 	block, err := aes.NewCipher(key)
-	ciphertext := make([]byte, BlockSize+len(content))
-	iv := ciphertext[:BlockSize]
+	if err != nil {
+		return "", err
+	}
 
-	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(ciphertext[aes.BlockSize:], content)
-
-	fmt.Printf("%x\n", ciphertext)
-
-	return string(ciphertext), nil
+	blockSize := block.BlockSize()
+	blockMode := cipher.NewCBCEncrypter(block, key[:blockSize]) //初始向量的长度必须等于块block的长度16字节
+	crypted := make([]byte, len(origData))
+	blockMode.CryptBlocks(crypted, origData)
+	return base64.StdEncoding.EncodeToString(crypted), nil
 }
 
 func getUserByToken(token string) (user Users, err error) {
-	key := []byte("561d1c4ce26e42189fdecafa15295c73")
-
-	ciphertext, _ := hex.DecodeString(token)
+	key := []byte(Key)
+	crypted, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return
+	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return
 	}
 
-	if len(ciphertext) < aes.BlockSize {
-		return
-	}
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-
-	if len(ciphertext)%aes.BlockSize != 0 {
-		return
-	}
-
-	mode := cipher.NewCBCDecrypter(block, iv)
-
-	mode.CryptBlocks(ciphertext, ciphertext)
-	userId, err := strconv.Atoi(string(ciphertext))
+	//AES分组长度为128位，所以blockSize=16，单位字节
+	blockSize := block.BlockSize()
+	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize]) //初始向量的长度必须等于块block的长度16字节
+	origData := make([]byte, len(crypted))
+	blockMode.CryptBlocks(origData, crypted)
+	userId, err := strconv.Atoi(string(origData))
 	if err != nil {
 		return
 	}
 	DB.Model(Users{}).Where("id=?", userId).First(&user)
 	return user, nil
 }
+
+//func getUserByToken(token string) (user Users, err error) {
+//	key := []byte("561d1c4ce26e42189fdecafa15295c73")
+//
+//	ciphertext, _ := hex.DecodeString(token)
+//	block, err := aes.NewCipher(key)
+//	if err != nil {
+//		return
+//	}
+//
+//	if len(ciphertext) < aes.BlockSize {
+//		return
+//	}
+//	iv := ciphertext[:aes.BlockSize]
+//	ciphertext = ciphertext[aes.BlockSize:]
+//
+//	if len(ciphertext)%aes.BlockSize != 0 {
+//		return
+//	}
+//
+//	mode := cipher.NewCBCDecrypter(block, iv)
+//
+//	mode.CryptBlocks(ciphertext, ciphertext)
+//	userId, err := strconv.Atoi(string(ciphertext))
+//	if err != nil {
+//		return
+//	}
+//	DB.Model(Users{}).Where("id=?", userId).First(&user)
+//	return user, nil
+//}

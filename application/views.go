@@ -34,7 +34,7 @@ type WXAuthRes struct {
 }
 
 type LoginReq struct {
-	UserName int    `json:"user_name"`
+	UserName string `json:"user_name"`
 	PassWord string `json:"pass_word"`
 }
 
@@ -112,12 +112,15 @@ func WebLogin(o *gin.Context) {
 		return
 	}
 	var user Users
-	DB.Model(&Users{}).Where(user).First(&user)
-	if user.ID == 0 {
+	DB.Model(&Users{}).Where(body).First(&user)
+	var userByte []byte
+	_ = json.Unmarshal(userByte, &user)
+	print("user: "+string(user.ID))
+	if user == (Users{}) || user.ID == 0 {
 		PackJSONRESP(o, 4001, "用户不存在")
 		return
 	}
-	token, err:=getUserToken(int(user.ID))
+	token, err := getUserToken(int(user.ID))
 	if err != nil {
 		PackJSONRESP(o, 1, fmt.Sprintf("创建token失败: %s", err.Error()))
 		return
