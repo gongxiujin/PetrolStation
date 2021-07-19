@@ -4,7 +4,8 @@ go 1.16
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
-	github.com/fatih/structs v1.1.0
+	github.com/fatih/structs v1.1.0 // indirect
+	github.com/gin-contrib/static v0.0.1
 	github.com/gin-gonic/gin v1.7.2
 	github.com/go-playground/validator/v10 v10.6.1 // indirect
 	github.com/go-redis/redis/v8 v8.10.0

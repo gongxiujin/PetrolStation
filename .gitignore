@@ -1,9 +1,9 @@
 .env/
 .idea/
-log/*.*
+log/*.log*
 license/
 .DS_Store
 .vscode
 front/node_modules
 vendor
-orm.db
+./orm.db

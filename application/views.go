@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+var SAVEPATH = "/opt/static/file/"
+var STATICFILE = "/static/img/"
+//var STATICFILE = "/Users/gongxiujin/code/PetrolStation/"
+
 var Logger *logrus.Logger
 var ctx = context.Background()
 
@@ -115,7 +119,6 @@ func WebLogin(o *gin.Context) {
 	DB.Model(&Users{}).Where(body).First(&user)
 	var userByte []byte
 	_ = json.Unmarshal(userByte, &user)
-	print("user: "+string(user.ID))
 	if user == (Users{}) || user.ID == 0 {
 		PackJSONRESP(o, 4001, "用户不存在")
 		return
@@ -166,7 +169,7 @@ func NeighborStation(o *gin.Context) {
 func StationList(o *gin.Context) {
 	var stations []Station
 	page := o.DefaultQuery("page", "1")
-	perPage := o.DefaultQuery("per_page", "10")
+	perPage := o.DefaultQuery("limit", "10")
 	pageInt, err := strconv.Atoi(page)
 	if err != nil {
 		PackJSONRESP(o, 4001, "page error")
@@ -175,21 +178,51 @@ func StationList(o *gin.Context) {
 	if err != nil {
 		PackJSONRESP(o, 4001, "page error")
 	}
-	DB.Limit(perPageInt).Offset(pageInt - 1).Find(&stations)
+	DB.Limit(perPageInt).Offset(pageInt - 1).Preload("Petrol").Find(&stations)
 	var count int64
 	DB.Model(&Station{}).Count(&count)
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "查询成功",
 		Data: map[string]interface{}{
-			"station": stations,
-			"count":   count,
+			"stations": stations,
+			"total":    count,
 		},
 	})
 }
 
 func AddPetrolPrice(o *gin.Context) {
+	var price PetrolPrice
+	if err := o.Bind(&price); err != nil {
+		PackJSONRESP(o, 4004, err.Error())
+		return
+	}
+	if price.ID == 0 {
+		DB.Create(&price)
+	} else {
+		DB.Save(&price)
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "插入成功",
+		Data: map[string]int{
+			"id": int(price.ID),
+		},
+	})
+}
 
+func DeletePetrolPrice(o *gin.Context) {
+	ID := o.Param("priceId")
+	priceId, err := strconv.Atoi(ID)
+	if err != nil {
+		PackJSONRESP(o, 4002, err.Error())
+		return
+	}
+	DB.Where("id = ?", priceId).Delete(&PetrolPrice{})
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "删除成功",
+	})
 }
 
 func DailyPetrol(o *gin.Context) {
@@ -230,30 +263,96 @@ func AddPetrolRecord(o *gin.Context) {
 
 func GetAdvertising(o *gin.Context) {
 	var advertising []Advertising
-	location := o.DefaultQuery("location", "home")
-	advType := o.DefaultQuery("type", "advertising")
-	DB.Find(&advertising, Advertising{
-		Location: location,
-		Type:     advType,
-		Publish:  true,
-	})
+	var total int64
+	location := o.DefaultQuery("location", "")
+	advType := o.DefaultQuery("type", "")
+	page := o.DefaultQuery("page", "1")
+	perPage := o.DefaultQuery("limit", "10")
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		PackJSONRESP(o, 4001, "page error")
+	}
+	perPageInt, err := strconv.Atoi(perPage)
+	if err != nil {
+		PackJSONRESP(o, 4001, "page error")
+	}
+	table := DB.Model(&Advertising{})
+	if location != "" || advType != "" {
+		table = table.Where("location = ? and Type = ? and publish = 1", location, advType).Order("create_time desc")
+		//DB.Find(&advertising, Advertising{
+		//	Location: location,
+		//	Type:     advType,
+		//	Publish:  true,
+		//})
+	} else {
+		table = table.Order("publish, create_time desc")
+	}
+	table.Limit(perPageInt).Offset(pageInt - 1).Find(&advertising)
+	table.Count(&total)
+
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "查询成功",
-		Data: advertising,
+		Data: map[string]interface{}{
+			"advertising": advertising,
+			"total":       total,
+		},
 	})
 }
 
-func AddAdvertising(o *gin.Context) {
-	var req Advertising
-	if err := o.ShouldBind(&req); err != nil {
-		PackJSONRESP(o, 4001, fmt.Sprintf("create advertising error: %s", err.Error()))
+func DeleteAdvertising(o *gin.Context) {
+	ID := o.Param("adverId")
+	adverId, err := strconv.Atoi(ID)
+	if err != nil {
+		PackJSONRESP(o, 4002, err.Error())
 		return
 	}
-	DB.Create(&req)
+	DB.Where("id = ?", adverId).Delete(&Advertising{})
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "删除成功",
+	})
+}
+
+func UpdateAdvertising(o *gin.Context) {
+	var advert Advertising
+	if err := o.Bind(&advert); err != nil {
+		PackJSONRESP(o, 4004, err.Error())
+		return
+	}
+	if advert.ID == 0 {
+		DB.Create(&advert)
+	} else {
+		DB.Save(&advert)
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "更新成功",
+		Data: map[string]int{
+			"id": int(advert.ID),
+		},
+	})
+}
+
+func UploadAdvertisingPic(o *gin.Context) {
+	file, err := o.FormFile("image")
+	if err != nil {
+		PackJSONRESP(o, 4001, err.Error())
+		return
+	}
+	tm := time.Unix(time.Now().Unix(), 0)
+	fileName := fmt.Sprintf("%s_%s", tm.Format("20060102030405"), file.Filename)
+	if err = o.SaveUploadedFile(file, fmt.Sprintf("%s%s", SAVEPATH, fileName)); err != nil {
+		PackJSONRESP(o, 4001, err.Error())
+		return
+	}
+	saveImg := STATICFILE+fileName
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "插入成功",
+		Data: map[string]string{
+			"file_name": saveImg,
+		},
 	})
 }
 

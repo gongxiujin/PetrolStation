@@ -5,12 +5,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gongxiujin/PetrolStation/application"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
+	"github.com/gin-contrib/static"
 	"github.com/rifflock/lfshook"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"os"
 	"path"
+	"runtime"
 	"time"
 )
 
@@ -92,9 +94,23 @@ func loggerMiddleware() gin.HandlerFunc {
 func main() {
 	router := gin.New()
 	router.Use(loggerMiddleware())
+	var defaultCPUNum = 2
+	if runtime.NumCPU() > defaultCPUNum {
+		runtime.GOMAXPROCS(3)
+	} else {
+		if runtime.NumCPU() > 1 {
+			runtime.GOMAXPROCS(runtime.NumCPU() - 1)
+		} else {
+			runtime.GOMAXPROCS(1)
+		}
+
+	}
 	application.Logger = initLogger()
 	application.DB = InitDb()
 	application.Redis = application.InitRedisClient()
+	//router.Static("/", "./dist/static")
+	router.Static(application.STATICFILE, application.SAVEPATH)
+	router.Use(static.Serve("/", static.LocalFile("./dist/", false)))
 	router.GET("/api/auth", application.AuthLogin)
 	router.POST("/api/login", application.WebLogin)
 	authRoute := router.Group("/api/v1/")
@@ -102,13 +118,16 @@ func main() {
 	{
 		authRoute.POST("/discover/nearby", application.NeighborStation)
 		authRoute.GET("/station", application.StationList)
-		authRoute.PUT("/discover/nearby", application.CreateStation)
+		authRoute.POST("/discover/upgrade/nearby", application.CreateStation)
 		authRoute.PUT("/discover/petrol", application.AddPetrolPrice)
+		authRoute.DELETE("/discover/petrol/:priceId", application.DeletePetrolPrice)
 		authRoute.GET("/home/daily_petrol", application.DailyPetrol)
 		authRoute.GET("/user/profile", application.GetUserProfile)
 		authRoute.POST("/user/record", application.AddPetrolRecord)
 		authRoute.GET("/advertising", application.GetAdvertising)
-		authRoute.POST("/advertising", application.AddAdvertising)
+		authRoute.DELETE("/advertising/:adverId", application.DeleteAdvertising)
+		authRoute.POST("/advertising", application.UpdateAdvertising)
+		authRoute.PUT("/upload/advertising", application.UploadAdvertisingPic)
 	}
 
 	_ = router.Run()

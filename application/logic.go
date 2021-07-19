@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const BlockSize = 32
@@ -59,7 +60,7 @@ func AuthenticationToken() gin.HandlerFunc {
 			context.AbortWithStatusJSON(http.StatusOK, map[string]interface{}{
 				"errno":   5001,
 				"result":  struct{}{},
-				"message": "Access denied",
+				"message": err.Error(),
 			})
 			return
 		}
@@ -67,7 +68,7 @@ func AuthenticationToken() gin.HandlerFunc {
 			context.AbortWithStatusJSON(http.StatusOK, map[string]interface{}{
 				"errno":   5001,
 				"result":  struct{}{},
-				"message": "Access denied",
+				"message": "用户不存在",
 			})
 			return
 		}
@@ -181,7 +182,8 @@ func getUserByToken(token string) (user Users, err error) {
 	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize]) //初始向量的长度必须等于块block的长度16字节
 	origData := make([]byte, len(crypted))
 	blockMode.CryptBlocks(origData, crypted)
-	userId, err := strconv.Atoi(string(origData))
+	userStingId := strings.Replace(string(origData), " ", "", -1)
+	userId, err := strconv.Atoi(userStingId)
 	if err != nil {
 		return
 	}

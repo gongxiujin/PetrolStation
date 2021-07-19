@@ -10,10 +10,11 @@ type PetrolDaily struct {
 	Version    string  `json:"version" gorm:"column:version"`
 	Price      float64 `json:"price" gorm:"column:price"`
 	Day        string  `json:"day" gorm:"column:day"`
-	CreateTime int64   `gorm:"<-;autoCreateTime:milli"`
+	CreateTime int64   `gorm:"<-;autoCreateTime"`
 }
 
 type Station struct {
+	gorm.Model
 	ID         uint    `json:"id,omitempty" gorm:"column:id;primaryKey"`
 	Province   string  `json:"province,omitempty" gorm:"column:province"`
 	City       string  `json:"city,omitempty"  gorm:"column:city"`
@@ -24,17 +25,18 @@ type Station struct {
 	Name       string  `json:"name,omitempty"  gorm:"column:name;type:varchar;size:50;index"`
 	Longitude  float64 `json:"longitude,omitempty"  gorm:"column:longitude"`
 	Latitude   float64 `json:"latitude,omitempty"  gorm:"column:latitude"`
-	CreateTime int64   `json:"create_time,omitempty" gorm:"autoCreateTime:milli"`
+	CreateTime int64   `json:"create_time,omitempty" gorm:"autoCreateTime"`
+	Petrol	[]PetrolPrice `json:"petrol,omitempty" gorm:"ForeignKey:StationID;save_associations:false"`
 }
 
 type PetrolPrice struct {
-	ID         uint `gorm:"column:id;primaryKey"`
-	StationID  uint `gorm:"index"`
-	Station    Station
-	Version    string
-	Price      float64
-	Day        string
-	CreateTime int64 `gorm:"autoCreateTime:milli"`
+	gorm.Model
+	ID         uint `json:"id" gorm:"column:id;primaryKey"`
+	StationID  uint `json:"station_id" gorm:"index"`
+	Version    string `json:"version"`
+	Price      float64 `json:"price"`
+	Day        string `json:"day"`
+	CreateTime int64 `json:"create_time" gorm:"autoCreateTime"`
 }
 
 type Advertising struct {
@@ -44,7 +46,7 @@ type Advertising struct {
 	Publish    bool   `json:"publish" gorm:"<-;column:publish"`
 	Content    string `json:"content" gorm:"column:content"`
 	Url        string `json:"url" gorm:"column:url"`
-	CreateTime int64  `json:"create_time,omitempty" gorm:"<-;autoCreateTime:milli"`
+	CreateTime int64  `json:"create_time,omitempty" gorm:"<-;autoCreateTime"`
 }
 
 type Users struct {
@@ -57,8 +59,8 @@ type Users struct {
 	Active     bool
 	Longitude  float64 `json:"longitude,omitempty"  gorm:"column:longitude"`
 	Latitude   float64 `json:"latitude,omitempty"  gorm:"column:latitude"`
-	CreateTime int64   `gorm:"autoCreateTime:milli"`
-	UpdateTime int64   `gorm:"autoUpdateTime:milli"`
+	CreateTime int64   `gorm:"autoCreateTime"`
+	UpdateTime int64   `gorm:"autoUpdateTime"`
 }
 
 type PetrolRecord struct {
