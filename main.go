@@ -29,7 +29,7 @@ func InitDb() *gorm.DB {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 	_ = db.AutoMigrate(&application.Users{}, &application.Advertising{}, &application.Station{},
-		&application.PetrolDaily{}, &application.PetrolPrice{}, &application.PetrolRecord{})
+		&application.PetrolDaily{}, &application.PetrolPrice{}, &application.PetrolRecord{}, &application.UserTrack{})
 	// Display SQL queries
 	db.Logger.LogMode(1)
 
@@ -128,6 +128,7 @@ func main() {
 		authRoute.DELETE("/advertising/:adverId", application.DeleteAdvertising)
 		authRoute.POST("/advertising", application.UpdateAdvertising)
 		authRoute.PUT("/upload/advertising", application.UploadAdvertisingPic)
+		authRoute.GET("/user/location", application.GetLocation)
 	}
 
 	_ = router.Run()

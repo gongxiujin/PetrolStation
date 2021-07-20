@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
-	"net/http"
 	"strconv"
 	"time"
 )
 
 var SAVEPATH = "/opt/static/file/"
 var STATICFILE = "/static/img/"
+
 //var STATICFILE = "/Users/gongxiujin/code/PetrolStation/"
 
 var Logger *logrus.Logger
@@ -29,6 +30,22 @@ type UserProfileRes struct {
 	CumulativeDosage float64 `json:"cumulative_dosage"`
 }
 
+type NearbyStationRes struct {
+	Station
+	Distance float64 `json:"distance"`
+}
+
+type NearbyReq struct {
+	Num string `json:"num"`
+	OrderBy	string `json:"order_by"`
+	Area	string `json:"area"`
+}
+
+type LocationType struct {
+	Longitude float64 `json:"longitude"`
+	Latitude  float64 `json:"latitude"`
+}
+
 type WXAuthRes struct {
 	Errcode    int    `json:"errcode"`
 	Unionid    string `json:"unionid"`
@@ -40,14 +57,6 @@ type WXAuthRes struct {
 type LoginReq struct {
 	UserName string `json:"user_name"`
 	PassWord string `json:"pass_word"`
-}
-
-func PackJSONRESP(o *gin.Context, code int, msg string) {
-	Logger.Error(fmt.Sprintf("origin ip: %s, url: %s, method: %s, error: %s", o.ClientIP(), o.Request.RequestURI, o.Request.Method, msg))
-	o.AbortWithStatusJSON(http.StatusOK, ResponseJson{
-		Code: code,
-		Msg:  msg,
-	})
 }
 
 func GetUserProfile(o *gin.Context) {
@@ -65,7 +74,8 @@ func GetUserProfile(o *gin.Context) {
 	var user Users
 	userStr := o.GetString("User")
 	if err := json.Unmarshal([]byte(userStr), &user); err != nil {
-
+		PackJSONRESP(o, 5001, "Access denied")
+		return
 	}
 	DB.Raw("select user_id, min(mileage) min_mileage, max(mileage) max_mileage, sum(volume) sum_volume, min(create_time) min_create_time, max(create_time) max_create_time from petrol_records where user_id=? group by user_id;", user.ID).Scan(&pq)
 	DB.Raw("select max(a.volume)/(max(a.mileage)-min(a.mileage))*100 last_qtrip from (select * from petrol_records where user_id=? order by create_time desc  limit 2) a group by a.user_id;", user.ID).Scan(&pr)
@@ -107,6 +117,30 @@ func AuthLogin(o *gin.Context) {
 		PackJSONRESP(o, 5003, authRes.Errmsg)
 		return
 	}
+	var user Users
+	DB.Model(&Users{}).First(&user, &Users{UserName: authRes.Openid})
+	if user == (Users{}) || user.ID == 0 {
+		user = Users{
+			UserName:  authRes.Openid,
+			PassWord:  authRes.SessionKey,
+			Avator:    "",
+			Phone:     "",
+			NickName:  "",
+			Active:    true,
+			Longitude: 0,
+			Latitude:  0,
+		}
+		DB.Create(&user)
+	}
+
+	token, err := getUserToken(int(user.ID))
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "登录成功",
+		Data: map[string]string{
+			"token": token,
+		},
+	})
 }
 
 func WebLogin(o *gin.Context) {
@@ -160,10 +194,62 @@ func CreateStation(o *gin.Context) {
 	})
 }
 
+func GetLocation(o *gin.Context) {
+	user, userErr := getCurrentUser(o)
+	if userErr != nil {
+		PackJSONRESP(o, 5001, "Access denied")
+		return
+	}
+	country, province, city, district, err := GetLocationByCoord(user.Longitude, user.Latitude)
+	if err != nil {
+		PackJSONRESP(o, 4001, err.Error())
+		return
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "查询成功",
+		Data: map[string]interface{}{
+			"country": country,
+			"province": province,
+			"city":    city,
+			"district": district,
+		},
+	})
+}
+
 func NeighborStation(o *gin.Context) {
-	//longitude
-	//id := c.Query("id")
-	//Redis.Get(ctx, "")
+	var body NearbyReq
+	var response []NearbyStationRes
+	if err := o.ShouldBindJSON(&body); err!=nil{
+		PackJSONRESP(o, 4001, err.Error())
+		return
+	}
+	user, err := getCurrentUser(o)
+	if err != nil {
+		PackJSONRESP(o, 5001, "Access denied")
+		return
+	}
+	locations, err := Redis.GeoRadius(ctx, "station", user.Longitude, user.Latitude, &redis.GeoRadiusQuery{
+		WithDist: true,
+		Sort:     "ASC",
+	}).Result()
+	if err != nil {
+		PackJSONRESP(o, 4001, "query error: "+err.Error())
+		return
+	}
+	for _, location := range locations {
+		var tmpStation Station
+		DB.Model(&Station{}).Where("id = ?", strconv.Atoi(location.Name)).First(&tmpStation)
+		response =  append(response, NearbyStationRes{
+			tmpStation,
+			location.Dist,
+		})
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "查询成功",
+		Data: response,
+	})
 }
 
 func StationList(o *gin.Context) {
@@ -173,10 +259,12 @@ func StationList(o *gin.Context) {
 	pageInt, err := strconv.Atoi(page)
 	if err != nil {
 		PackJSONRESP(o, 4001, "page error")
+		return
 	}
 	perPageInt, err := strconv.Atoi(perPage)
 	if err != nil {
 		PackJSONRESP(o, 4001, "page error")
+		return
 	}
 	DB.Limit(perPageInt).Offset(pageInt - 1).Preload("Petrol").Find(&stations)
 	var count int64
@@ -253,7 +341,12 @@ func AddPetrolRecord(o *gin.Context) {
 		PackJSONRESP(o, 4004, err.Error())
 		return
 	}
-	addRecord.UserId = o.GetUint("UserId")
+	user, err := getCurrentUser(o)
+	if err != nil {
+		PackJSONRESP(o, 5001, "Access denied")
+		return
+	}
+	addRecord.UserId = user.ID
 	DB.Create(&addRecord)
 	o.JSON(200, ResponseJson{
 		Code: 0,
@@ -271,10 +364,12 @@ func GetAdvertising(o *gin.Context) {
 	pageInt, err := strconv.Atoi(page)
 	if err != nil {
 		PackJSONRESP(o, 4001, "page error")
+		return
 	}
 	perPageInt, err := strconv.Atoi(perPage)
 	if err != nil {
 		PackJSONRESP(o, 4001, "page error")
+		return
 	}
 	table := DB.Model(&Advertising{})
 	if location != "" || advType != "" {
@@ -346,7 +441,7 @@ func UploadAdvertisingPic(o *gin.Context) {
 		PackJSONRESP(o, 4001, err.Error())
 		return
 	}
-	saveImg := STATICFILE+fileName
+	saveImg := STATICFILE + fileName
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "插入成功",

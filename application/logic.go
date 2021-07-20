@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/gin-gonic/gin"
@@ -40,6 +41,26 @@ func (m *GDApiError) Error() string {
 	return "gd api interface error"
 }
 
+type CustomError struct {
+	Err  string
+}
+
+func (c *CustomError) Error() string {
+	return c.Err
+}
+
+func (c *CustomError) setError(e string)  {
+	c.Err = e
+}
+
+func PackJSONRESP(o *gin.Context, code int, msg string) {
+	Logger.Error(fmt.Sprintf("origin ip: %s, url: %s, method: %s, error: %s", o.ClientIP(), o.Request.RequestURI, o.Request.Method, msg))
+	o.AbortWithStatusJSON(http.StatusOK, ResponseJson{
+		Code: code,
+		Msg:  msg,
+	})
+}
+
 func validateAuth(token string) (user Users, err error) {
 	return getUserByToken(token)
 }
@@ -48,29 +69,38 @@ func AuthenticationToken() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		Token := context.Request.Header.Get("Token")
 		if Token == "" {
-			context.AbortWithStatusJSON(http.StatusOK, map[string]interface{}{
-				"errno":   5001,
-				"result":  struct{}{},
-				"message": "Access denied",
-			})
+			PackJSONRESP(context, 5001, "Access denied")
 			return
 		}
 		user, err := validateAuth(Token)
 		if err != nil {
-			context.AbortWithStatusJSON(http.StatusOK, map[string]interface{}{
-				"errno":   5001,
-				"result":  struct{}{},
-				"message": err.Error(),
-			})
+			PackJSONRESP(context, 5001, "token parse error: " + err.Error())
 			return
 		}
 		if user.ID == 0 {
-			context.AbortWithStatusJSON(http.StatusOK, map[string]interface{}{
-				"errno":   5001,
-				"result":  struct{}{},
-				"message": "用户不存在",
-			})
+			PackJSONRESP(context, 5001, "用户不存在")
 			return
+		}
+		if user.Active {
+			longitudeStr := context.Request.Header.Get("longitude")
+			latitudeStr := context.Request.Header.Get("latitude")
+			if longitudeStr == "" || latitudeStr == ""{
+				PackJSONRESP(context, 5008, "longitude or latitude needed!")
+				return
+			}
+			longitude, lngErr := strconv.ParseFloat(longitudeStr, 64)
+			latitude, latErr := strconv.ParseFloat(latitudeStr, 64)
+			if lngErr != nil || latErr != nil{
+				PackJSONRESP(context, 5008, "incorrect format： longitude or latitude!")
+				return
+			}
+			user.Longitude = longitude
+			user.Latitude = latitude
+			DB.Save(user)
+			DB.Create(&UserTrack{
+				Longitude:  longitude,
+				Latitude:   latitude,
+			})
 		}
 		userStr, _ := json.Marshal(user)
 		context.Set("User", string(userStr))
@@ -191,32 +221,10 @@ func getUserByToken(token string) (user Users, err error) {
 	return user, nil
 }
 
-//func getUserByToken(token string) (user Users, err error) {
-//	key := []byte("561d1c4ce26e42189fdecafa15295c73")
-//
-//	ciphertext, _ := hex.DecodeString(token)
-//	block, err := aes.NewCipher(key)
-//	if err != nil {
-//		return
-//	}
-//
-//	if len(ciphertext) < aes.BlockSize {
-//		return
-//	}
-//	iv := ciphertext[:aes.BlockSize]
-//	ciphertext = ciphertext[aes.BlockSize:]
-//
-//	if len(ciphertext)%aes.BlockSize != 0 {
-//		return
-//	}
-//
-//	mode := cipher.NewCBCDecrypter(block, iv)
-//
-//	mode.CryptBlocks(ciphertext, ciphertext)
-//	userId, err := strconv.Atoi(string(ciphertext))
-//	if err != nil {
-//		return
-//	}
-//	DB.Model(Users{}).Where("id=?", userId).First(&user)
-//	return user, nil
-//}
+func getCurrentUser(o *gin.Context) (user *Users, err error){
+	userStr := o.GetString("User")
+	if err := json.Unmarshal([]byte(userStr), &user); err != nil {
+		return nil, errors.New("access denied")
+	}
+	return user, nil
+}

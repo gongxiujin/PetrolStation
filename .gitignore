@@ -5,5 +5,5 @@ license/
 .DS_Store
 .vscode
 front/node_modules
-vendor
+vendor/*
 ./orm.db

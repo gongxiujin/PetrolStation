@@ -5,7 +5,7 @@ import "gorm.io/gorm"
 var DB *gorm.DB
 
 type PetrolDaily struct {
-	ID         uint    `gorm:"<-;column:id;primaryKey"`
+	ID         int    `gorm:"<-;column:id;primaryKey"`
 	Province   string  `json:"province" gorm:"<-;column:province"`
 	Version    string  `json:"version" gorm:"column:version"`
 	Price      float64 `json:"price" gorm:"column:price"`
@@ -15,7 +15,7 @@ type PetrolDaily struct {
 
 type Station struct {
 	gorm.Model
-	ID         uint    `json:"id,omitempty" gorm:"column:id;primaryKey"`
+	ID         int    `json:"id,omitempty" gorm:"column:id;primaryKey"`
 	Province   string  `json:"province,omitempty" gorm:"column:province"`
 	City       string  `json:"city,omitempty"  gorm:"column:city"`
 	Country    string  `json:"country,omitempty"  gorm:"column:country"`
@@ -31,7 +31,7 @@ type Station struct {
 
 type PetrolPrice struct {
 	gorm.Model
-	ID         uint `json:"id" gorm:"column:id;primaryKey"`
+	ID         int `json:"id" gorm:"column:id;primaryKey"`
 	StationID  uint `json:"station_id" gorm:"index"`
 	Version    string `json:"version"`
 	Price      float64 `json:"price"`
@@ -40,7 +40,7 @@ type PetrolPrice struct {
 }
 
 type Advertising struct {
-	ID         uint   `json:"id,omitempty" gorm:"<-:create;column:id;primaryKey"`
+	ID         int   `json:"id,omitempty" gorm:"<-:create;column:id;primaryKey"`
 	Location   string `json:"location" gorm:"<-:create;column:location"`
 	Type       string `json:"type" gorm:"<-:create;column:type"`
 	Publish    bool   `json:"publish" gorm:"<-;column:publish"`
@@ -50,7 +50,7 @@ type Advertising struct {
 }
 
 type Users struct {
-	ID         uint   `gorm:"column:id;primaryKey"`
+	ID         int   `gorm:"column:id;primaryKey"`
 	UserName   string `gorm:"column:user_name"`
 	PassWord   string `gorm:"column:pass_word"`
 	Avator     string
@@ -64,12 +64,20 @@ type Users struct {
 }
 
 type PetrolRecord struct {
-	ID         uint    `gorm:"column:id;primaryKey"`
-	UserId     uint    `gorm:"index"`
+	ID         int    `gorm:"column:id;primaryKey"`
+	UserId     int    `gorm:"index"`
 	Volume     float64 `json:"volume" gorm:"column:volume"`
 	Price      float64 `json:"price" gorm:"column:price"`
 	StationId  uint    `json:"station_id" gorm:"column:station_id"`
 	Version    string  `json:"version" gorm:"column:version"`
 	Mileage    float64 `json:"mileage" gorm:"column:mileage"`
 	CreateTime int     `json:"create_time" gorm:"column:create_time;autoCreateTime"`
+}
+
+type UserTrack struct {
+	ID         int   `gorm:"column:id;primaryKey"`
+	UserId     int   `json:"user_id" gorm:"column:user_id"`
+	Longitude  float64 `json:"longitude,omitempty"  gorm:"column:longitude"`
+	Latitude   float64 `json:"latitude,omitempty"  gorm:"column:latitude"`
+	CreateTime int64   `gorm:"autoCreateTime"`
 }
