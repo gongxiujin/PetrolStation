@@ -7,7 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,46 +21,8 @@ var STATICFILE = "/static/img/"
 var Logger *logrus.Logger
 var ctx = context.Background()
 
-type UserProfileRes struct {
-	NickName         string  `json:"nick_name"`
-	HeadImage        string  `json:"head_image"`
-	LastQtrip        float64 `json:"last_qtrip"`
-	AvgQtrip         float64 `json:"avg_qtrip"`
-	AvgTrip          float64 `json:"avg_trip"`
-	RealMileage      float64 `json:"real_mileage"`
-	LastMileage      float64 `json:"last_mileage"`
-	CumulativeDosage float64 `json:"cumulative_dosage"`
-}
-
-type NearbyStationRes struct {
-	Station
-	Distance float64 `json:"distance"`
-}
-
-type NearbyReq struct {
-	Num string `json:"num"`
-	OrderBy	string `json:"order_by"`
-	Area	string `json:"area"`
-}
-
-type LocationType struct {
-	Longitude float64 `json:"longitude"`
-	Latitude  float64 `json:"latitude"`
-}
-
-type WXAuthRes struct {
-	Errcode    int    `json:"errcode"`
-	Unionid    string `json:"unionid"`
-	Errmsg     string `json:"errmsg"`
-	SessionKey string `json:"session_key"`
-	Openid     string `json:"openid"`
-}
-
-type LoginReq struct {
-	UserName string `json:"user_name"`
-	PassWord string `json:"pass_word"`
-}
-
+// ----------------小程序api-------------
+// 获取用户信息
 func GetUserProfile(o *gin.Context) {
 	var pq struct {
 		UserId        int     `json:"user_id"`
@@ -97,6 +61,7 @@ func GetUserProfile(o *gin.Context) {
 
 }
 
+// 小程序登录
 func AuthLogin(o *gin.Context) {
 	var authRes WXAuthRes
 	code := o.DefaultQuery("code", "")
@@ -131,9 +96,10 @@ func AuthLogin(o *gin.Context) {
 			Latitude:  0,
 		}
 		DB.Create(&user)
+		err = logUserTrack(o.Request.Header, &user)
 	}
 
-	token, err := getUserToken(int(user.ID))
+	token, err := getUserToken(user.ID)
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "登录成功",
@@ -143,6 +109,138 @@ func AuthLogin(o *gin.Context) {
 	})
 }
 
+//每日油价
+func DailyPetrol(o *gin.Context) {
+	var p PetrolPrice
+	var daily []PetrolDaily
+	result := Redis.Get(ctx, "dailyPetrol")
+	s, _ := result.Result()
+	if err := json.Unmarshal([]byte(s), &daily); err != nil {
+		fmt.Println(err)
+	}
+	DB.Find(&p, "day", time.Now().Format("2016-01-02"))
+	result = Redis.Get(ctx, "DailyInsert")
+	if result.Val() == "1" && p.ID == 0 {
+		DB.Create(&daily)
+		Redis.Del(ctx, "DailyInsert")
+		Logger.Info("delete DailyInsert")
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "查询成功",
+		Data: daily,
+	})
+}
+
+// 获取当前位置
+func GetLocation(o *gin.Context) {
+	user, userErr := getCurrentUser(o)
+	if userErr != nil {
+		PackJSONRESP(o, 5001, "Access denied")
+		return
+	}
+	country, province, city, district, err := GetLocationByCoord(user.Longitude, user.Latitude)
+	if err != nil {
+		PackJSONRESP(o, 4001, err.Error())
+		return
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "查询成功",
+		Data: map[string]interface{}{
+			"country":  country,
+			"province": province,
+			"city":     city,
+			"district": district,
+		},
+	})
+}
+
+// 附近加油站
+func NeighborStation(o *gin.Context) {
+	var body NearbyReq
+	var response []NearbyStationRes
+	if err := o.ShouldBindJSON(&body); err != nil {
+		PackJSONRESP(o, 4001, err.Error())
+		return
+	}
+	if body.Num == "" || body.Area == "" || body.OrderBy == "" {
+		PackJSONRESP(o, 4001, "params error")
+		return
+	}
+	user, err := getCurrentUser(o)
+	if err != nil {
+		PackJSONRESP(o, 5001, "Access denied")
+		return
+	}
+	var stations []Station
+	// redis中根据远近取出所有的加油站
+	locations, err := Redis.GeoRadius(ctx, "station", user.Longitude, user.Latitude, &redis.GeoRadiusQuery{
+		WithDist: true,
+		Sort:     "ASC",
+	}).Result()
+	if err != nil {
+		PackJSONRESP(o, 4001, "query error: "+err.Error())
+		return
+	}
+	var stationIds []string
+	stationIdToDis := make(map[string]float64)
+
+	for _, location := range locations {
+		_, err := strconv.Atoi(location.Name)
+		if err != nil {
+			PackJSONRESP(o, 4001, "parse int error")
+			return
+		}
+		stationIds = append(stationIds, location.Name)
+		stationIdToDis[location.Name] = location.Dist
+	}
+	// 根据油号、范围内的加油站id、区县找出所有加油站
+	DB.Model(&Station{}).Preload("Petrol", "version = ? and station_id in ()", body.Num, strings.Join(stationIds, ",")).Where("id in (?) and country = ?", strings.Join(stationIds, ",")).Find(&stations)
+	for _, station := range stations {
+		response = append(response, NearbyStationRes{
+			station,
+			stationIdToDis[fmt.Sprintf("%d", station.ID)],
+		})
+	}
+	// 排序
+	if body.OrderBy == "price" {
+		sort.Sort(stationOrderByPrice(response))
+	} else if body.OrderBy == "distance" {
+		sort.Sort(stationOrderByDistance(response))
+	} else if body.OrderBy == "smart" {
+		sort.Sort(stationOrderBySmart(response))
+	}
+
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "查询成功",
+		Data: response,
+	})
+}
+
+// 添加加油记录
+func AddPetrolRecord(o *gin.Context) {
+	var addRecord PetrolRecord
+	if err := o.Bind(&addRecord); err != nil {
+		PackJSONRESP(o, 4004, err.Error())
+		return
+	}
+	user, err := getCurrentUser(o)
+	if err != nil {
+		PackJSONRESP(o, 5001, "Access denied")
+		return
+	}
+	addRecord.UserId = user.ID
+	DB.Create(&addRecord)
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "插入成功",
+	})
+}
+
+// ----------------web页面api-------------
+// 用户登录
 func WebLogin(o *gin.Context) {
 	var body LoginReq
 	if err := o.ShouldBindJSON(&body); err != nil {
@@ -171,87 +269,7 @@ func WebLogin(o *gin.Context) {
 	})
 }
 
-func CreateStation(o *gin.Context) {
-	file, err := o.FormFile("file")
-	if err != nil {
-		PackJSONRESP(o, 4001, fmt.Sprintf("read request file error: %s", err.Error()))
-		return
-	}
-	f, err := file.Open()
-	if err != nil {
-		PackJSONRESP(o, 4001, fmt.Sprintf("open error: %s", err.Error()))
-		return
-	}
-	defer f.Close()
-	err = writeToDb(f)
-	if err != nil {
-		PackJSONRESP(o, 4001, fmt.Sprintf("Write db error: %s", err.Error()))
-		return
-	}
-	o.JSON(200, ResponseJson{
-		Code: 0,
-		Msg:  "插入成功",
-	})
-}
-
-func GetLocation(o *gin.Context) {
-	user, userErr := getCurrentUser(o)
-	if userErr != nil {
-		PackJSONRESP(o, 5001, "Access denied")
-		return
-	}
-	country, province, city, district, err := GetLocationByCoord(user.Longitude, user.Latitude)
-	if err != nil {
-		PackJSONRESP(o, 4001, err.Error())
-		return
-	}
-	o.JSON(200, ResponseJson{
-		Code: 0,
-		Msg:  "查询成功",
-		Data: map[string]interface{}{
-			"country": country,
-			"province": province,
-			"city":    city,
-			"district": district,
-		},
-	})
-}
-
-func NeighborStation(o *gin.Context) {
-	var body NearbyReq
-	var response []NearbyStationRes
-	if err := o.ShouldBindJSON(&body); err!=nil{
-		PackJSONRESP(o, 4001, err.Error())
-		return
-	}
-	user, err := getCurrentUser(o)
-	if err != nil {
-		PackJSONRESP(o, 5001, "Access denied")
-		return
-	}
-	locations, err := Redis.GeoRadius(ctx, "station", user.Longitude, user.Latitude, &redis.GeoRadiusQuery{
-		WithDist: true,
-		Sort:     "ASC",
-	}).Result()
-	if err != nil {
-		PackJSONRESP(o, 4001, "query error: "+err.Error())
-		return
-	}
-	for _, location := range locations {
-		var tmpStation Station
-		DB.Model(&Station{}).Where("id = ?", strconv.Atoi(location.Name)).First(&tmpStation)
-		response =  append(response, NearbyStationRes{
-			tmpStation,
-			location.Dist,
-		})
-	}
-	o.JSON(200, ResponseJson{
-		Code: 0,
-		Msg:  "查询成功",
-		Data: response,
-	})
-}
-
+// 加油站列表
 func StationList(o *gin.Context) {
 	var stations []Station
 	page := o.DefaultQuery("page", "1")
@@ -279,6 +297,7 @@ func StationList(o *gin.Context) {
 	})
 }
 
+// 添加/修改加油站油价
 func AddPetrolPrice(o *gin.Context) {
 	var price PetrolPrice
 	if err := o.Bind(&price); err != nil {
@@ -299,6 +318,7 @@ func AddPetrolPrice(o *gin.Context) {
 	})
 }
 
+// 删除加油站油价
 func DeletePetrolPrice(o *gin.Context) {
 	ID := o.Param("priceId")
 	priceId, err := strconv.Atoi(ID)
@@ -313,47 +333,7 @@ func DeletePetrolPrice(o *gin.Context) {
 	})
 }
 
-func DailyPetrol(o *gin.Context) {
-	var p PetrolPrice
-	var daily []PetrolDaily
-	result := Redis.Get(ctx, "dailyPetrol")
-	s, _ := result.Result()
-	if err := json.Unmarshal([]byte(s), &daily); err != nil {
-		fmt.Println(err)
-	}
-	DB.Find(&p, "day", time.Now().Format("2016-01-02"))
-	result = Redis.Get(ctx, "DailyInsert")
-	if result.Val() == "1" && p.ID == 0 {
-		DB.Create(&daily)
-		Redis.Del(ctx, "DailyInsert")
-		Logger.Info("delete DailyInsert")
-	}
-	o.JSON(200, ResponseJson{
-		Code: 0,
-		Msg:  "查询成功",
-		Data: daily,
-	})
-}
-
-func AddPetrolRecord(o *gin.Context) {
-	var addRecord PetrolRecord
-	if err := o.Bind(&addRecord); err != nil {
-		PackJSONRESP(o, 4004, err.Error())
-		return
-	}
-	user, err := getCurrentUser(o)
-	if err != nil {
-		PackJSONRESP(o, 5001, "Access denied")
-		return
-	}
-	addRecord.UserId = user.ID
-	DB.Create(&addRecord)
-	o.JSON(200, ResponseJson{
-		Code: 0,
-		Msg:  "插入成功",
-	})
-}
-
+// 获取广告列表
 func GetAdvertising(o *gin.Context) {
 	var advertising []Advertising
 	var total int64
@@ -395,6 +375,7 @@ func GetAdvertising(o *gin.Context) {
 	})
 }
 
+// 删除广告
 func DeleteAdvertising(o *gin.Context) {
 	ID := o.Param("adverId")
 	adverId, err := strconv.Atoi(ID)
@@ -409,6 +390,7 @@ func DeleteAdvertising(o *gin.Context) {
 	})
 }
 
+// 更新广告
 func UpdateAdvertising(o *gin.Context) {
 	var advert Advertising
 	if err := o.Bind(&advert); err != nil {
@@ -429,6 +411,7 @@ func UpdateAdvertising(o *gin.Context) {
 	})
 }
 
+// 上传广告图片
 func UploadAdvertisingPic(o *gin.Context) {
 	file, err := o.FormFile("image")
 	if err != nil {
@@ -451,24 +434,26 @@ func UploadAdvertisingPic(o *gin.Context) {
 	})
 }
 
-func GetDiffDaysBySecond(t1, t2 int) int {
-	time1 := time.Unix(int64(t1), 0)
-	time2 := time.Unix(int64(t2), 0)
-
-	return GetDiffDays(time1, time2)
-}
-
-func GetDiffDays(t1, t2 time.Time) int {
-	t1 = time.Date(t1.Year(), t1.Month(), t1.Day(), 0, 0, 0, 0, time.Local)
-	t2 = time.Date(t2.Year(), t2.Month(), t2.Day(), 0, 0, 0, 0, time.Local)
-	diff := int(t1.Sub(t2).Hours() / 24)
-	if diff < 1 {
-		return 1
+// 创建加油站
+func CreateStation(o *gin.Context) {
+	file, err := o.FormFile("file")
+	if err != nil {
+		PackJSONRESP(o, 4001, fmt.Sprintf("read request file error: %s", err.Error()))
+		return
 	}
-	return diff
-}
-
-func Decimal(value float64) float64 {
-	value, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", value), 64)
-	return value
+	f, err := file.Open()
+	if err != nil {
+		PackJSONRESP(o, 4001, fmt.Sprintf("open error: %s", err.Error()))
+		return
+	}
+	defer f.Close()
+	err = writeToDb(f)
+	if err != nil {
+		PackJSONRESP(o, 4001, fmt.Sprintf("Write db error: %s", err.Error()))
+		return
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "插入成功",
+	})
 }

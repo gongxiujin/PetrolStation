@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const BlockSize = 32
@@ -65,6 +66,27 @@ func validateAuth(token string) (user Users, err error) {
 	return getUserByToken(token)
 }
 
+func logUserTrack(header http.Header, user *Users) error{
+	longitudeStr := header.Get("longitude")
+	latitudeStr := header.Get("latitude")
+	if longitudeStr == "" || latitudeStr == ""{
+		return errors.New("longitude or latitude needed!")
+	}
+	longitude, lngErr := strconv.ParseFloat(longitudeStr, 64)
+	latitude, latErr := strconv.ParseFloat(latitudeStr, 64)
+	if lngErr != nil || latErr != nil{
+		return errors.New("incorrect format： longitude or latitude!")
+	}
+	user.Longitude = longitude
+	user.Latitude = latitude
+	DB.Save(user)
+	DB.Create(&UserTrack{
+		Longitude:  longitude,
+		Latitude:   latitude,
+	})
+	return nil
+}
+
 func AuthenticationToken() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		Token := context.Request.Header.Get("Token")
@@ -82,25 +104,10 @@ func AuthenticationToken() gin.HandlerFunc {
 			return
 		}
 		if user.Active {
-			longitudeStr := context.Request.Header.Get("longitude")
-			latitudeStr := context.Request.Header.Get("latitude")
-			if longitudeStr == "" || latitudeStr == ""{
-				PackJSONRESP(context, 5008, "longitude or latitude needed!")
+			if err = logUserTrack(context.Request.Header, &user); err != nil{
+				PackJSONRESP(context, 5001, err.Error())
 				return
 			}
-			longitude, lngErr := strconv.ParseFloat(longitudeStr, 64)
-			latitude, latErr := strconv.ParseFloat(latitudeStr, 64)
-			if lngErr != nil || latErr != nil{
-				PackJSONRESP(context, 5008, "incorrect format： longitude or latitude!")
-				return
-			}
-			user.Longitude = longitude
-			user.Latitude = latitude
-			DB.Save(user)
-			DB.Create(&UserTrack{
-				Longitude:  longitude,
-				Latitude:   latitude,
-			})
 		}
 		userStr, _ := json.Marshal(user)
 		context.Set("User", string(userStr))
@@ -227,4 +234,51 @@ func getCurrentUser(o *gin.Context) (user *Users, err error){
 		return nil, errors.New("access denied")
 	}
 	return user, nil
+}
+
+func GetDiffDaysBySecond(t1, t2 int) int {
+	time1 := time.Unix(int64(t1), 0)
+	time2 := time.Unix(int64(t2), 0)
+
+	return GetDiffDays(time1, time2)
+}
+
+func GetDiffDays(t1, t2 time.Time) int {
+	t1 = time.Date(t1.Year(), t1.Month(), t1.Day(), 0, 0, 0, 0, time.Local)
+	t2 = time.Date(t2.Year(), t2.Month(), t2.Day(), 0, 0, 0, 0, time.Local)
+	diff := int(t1.Sub(t2).Hours() / 24)
+	if diff < 1 {
+		return 1
+	}
+	return diff
+}
+
+func Decimal(value float64) float64 {
+	value, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", value), 64)
+	return value
+}
+
+// sort方法
+type stationOrderByPrice []NearbyStationRes
+
+func (a stationOrderByPrice) Len() int      { return len(a) }
+func (a stationOrderByPrice) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a stationOrderByPrice) Less(i, j int) bool {
+	return a[i].Petrol[0].Price > a[j].Petrol[0].Price
+}
+
+type stationOrderByDistance []NearbyStationRes
+
+func (a stationOrderByDistance) Len() int      { return len(a) }
+func (a stationOrderByDistance) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a stationOrderByDistance) Less(i, j int) bool {
+	return a[i].Distance > a[j].Distance
+}
+
+type stationOrderBySmart []NearbyStationRes
+
+func (a stationOrderBySmart) Len() int      { return len(a) }
+func (a stationOrderBySmart) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a stationOrderBySmart) Less(i, j int) bool {
+	return a[i].Petrol[0].Price*0.7 + a[i].Distance*0.3 > a[j].Petrol[0].Price*0.7 + a[j].Distance*0.3
 }
