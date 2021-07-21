@@ -155,7 +155,7 @@ breakHere:
 	var stationCache []*redis.GeoLocation
 	DB.Create(&Stations)
 	Redis.Del(ctx, STATIONKEY)
-	DB.Table("stations").Find(&stationCache)
+	//DB.Table("stations").Find(&stationCache)
 	DB.Raw("select id name, longitude, latitude from stations;").Scan(&stationCache)
 	Redis.GeoAdd(ctx, STATIONKEY, stationCache...)
 	return
