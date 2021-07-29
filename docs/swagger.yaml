@@ -1,0 +1,624 @@
+basePath: /api/v1
+definitions:
+  application.Advertising:
+    properties:
+      content:
+        description: 内容，图片为跳转连接，文字为内容
+        type: string
+      create_time:
+        description: 可忽略
+        type: integer
+      id:
+        description: ID
+        type: integer
+      location:
+        description: 位置，home 首页 display 发现页
+        enum:
+        - home
+        - display
+        type: string
+      publish:
+        description: 是否展示，可忽略
+        type: boolean
+      type:
+        description: 类型 advertising图片广告,notice 文字通知,carousel 轮播图
+        enum:
+        - advertising
+        - notice
+        - carousel
+        type: string
+      url:
+        description: 图片的真实地址
+        type: string
+    type: object
+  application.AdvertisingReq:
+    properties:
+      location:
+        description: 位置，home 首页 display 发现页
+        enum:
+        - home
+        - display
+        type: string
+      type:
+        description: 类型 advertising图片广告,notice 文字通知,carousel 轮播图
+        enum:
+        - advertising
+        - notice
+        - carousel
+        type: string
+    type: object
+  application.Area:
+    properties:
+      country:
+        description: 区域
+        type: string
+    type: object
+  application.LocalArea:
+    properties:
+      city:
+        description: 市
+        type: string
+      country:
+        description: 国家
+        type: string
+      district:
+        description: 区县
+        type: string
+      province:
+        description: 省份
+        type: string
+    type: object
+  application.NearbyReq:
+    properties:
+      area:
+        description: |-
+          县:
+          * price - 价格
+          * distance - 距离
+          * smart - 智能
+        type: string
+      num:
+        description: '汽油号:'
+        enum:
+        - "92"
+        - "95"
+        - "98"
+        - "0"
+        type: string
+      order_by:
+        description: |-
+          排序方式:
+          * price - 价格
+          * distance - 距离
+          * smart - 智能
+        enum:
+        - price
+        - distance
+        - smart
+        type: string
+    type: object
+  application.NearbyStationRes:
+    properties:
+      address:
+        description: 详细地址
+        type: string
+      city:
+        description: 市
+        type: string
+      country:
+        description: 县
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      distance:
+        description: 距离/ km
+        type: number
+      id:
+        description: 'id:'
+        type: integer
+      latitude:
+        description: 维度
+        type: number
+      logo:
+        description: 加油站logo
+        type: string
+      longitude:
+        description: 经度
+        type: number
+      name:
+        description: 加油站名字
+        type: string
+      petrol:
+        description: 油价信息
+        items:
+          $ref: '#/definitions/application.PetrolPrice'
+        type: array
+      phone:
+        description: 电话
+        type: string
+      province:
+        description: 省份
+        example: 省份
+        type: string
+    type: object
+  application.PetrolDaily:
+    properties:
+      createTime:
+        description: 创建时间, 忽略
+        type: integer
+      day:
+        description: 日期，忽略
+        type: string
+      id:
+        description: id
+        type: integer
+      price:
+        description: 价格
+        type: number
+      province:
+        description: 省份，忽略
+        type: string
+      version:
+        description: 油号
+        type: string
+    type: object
+  application.PetrolPrice:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      day:
+        description: 天，忽略
+        type: string
+      id:
+        description: id 可以忽略
+        type: integer
+      price:
+        description: 价格
+        type: number
+      station_id:
+        description: 可以忽略
+        type: integer
+      version:
+        description: 油号
+        type: string
+    type: object
+  application.PetrolRecord:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      id:
+        description: id
+        type: integer
+      mileage:
+        description: 当前公里数
+        type: number
+      price:
+        description: 单价
+        type: number
+      station_id:
+        description: 加油站id
+        type: integer
+      userId:
+        description: 用户id
+        type: integer
+      version:
+        description: 油号
+        type: string
+      volume:
+        description: 加油的体积
+        type: number
+    type: object
+  application.ResponseJson:
+    properties:
+      code:
+        type: integer
+      data:
+        type: object
+      msg:
+        type: string
+    type: object
+  application.Station:
+    properties:
+      address:
+        description: 详细地址
+        type: string
+      city:
+        description: 市
+        type: string
+      country:
+        description: 县
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      id:
+        description: 'id:'
+        type: integer
+      latitude:
+        description: 维度
+        type: number
+      logo:
+        description: 加油站logo
+        type: string
+      longitude:
+        description: 经度
+        type: number
+      name:
+        description: 加油站名字
+        type: string
+      petrol:
+        description: 油价信息
+        items:
+          $ref: '#/definitions/application.PetrolPrice'
+        type: array
+      phone:
+        description: 电话
+        type: string
+      province:
+        description: 省份
+        example: 省份
+        type: string
+    type: object
+  application.UserRecordRes:
+    properties:
+      avg_qtrip:
+        description: 平均油耗
+        type: number
+      avg_trip:
+        description: 平均行程
+        type: number
+      cumulative_dosage:
+        description: 累计加油量
+        type: number
+      head_image:
+        description: 头像
+        type: string
+      last_mileage:
+        description: 统计里程数
+        type: number
+      last_qtrip:
+        description: 最近油耗
+        type: number
+      nick_name:
+        description: 昵称
+        type: string
+      real_mileage:
+        description: 表显里程
+        type: number
+    type: object
+info:
+  contact: {}
+paths:
+  /discover/area:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有可展示的区县列表
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬读
+        in: query
+        name: latitude
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                data:
+                  items:
+                    $ref: '#/definitions/application.Area'
+                  type: array
+                msg:
+                  type: string
+              type: object
+      summary: 获取所有可展示的区县
+  /discover/nearby:
+    post:
+      consumes:
+      - application/json
+      description: 获取广告列表
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬度
+        in: query
+        name: latitude
+        required: true
+        type: number
+      - description: body data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/application.AdvertisingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                data:
+                  items:
+                    $ref: '#/definitions/application.Advertising'
+                  type: array
+                msg:
+                  type: string
+              type: object
+      summary: 获取广告列表
+  /home/daily_petrol:
+    get:
+      consumes:
+      - application/json
+      description: 获取每日油价
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 未读
+        in: query
+        name: latitude
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                data:
+                  items:
+                    $ref: '#/definitions/application.PetrolDaily'
+                  type: array
+                msg:
+                  type: string
+              type: object
+      summary: 每日油价
+  /station:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有油站列表
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬读
+        in: query
+        name: latitude
+        required: true
+        type: number
+      - default: 1
+        description: 页数
+        in: query
+        name: page
+        type: number
+      - default: 10
+        description: 每页条数
+        in: query
+        name: limit
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                data:
+                  items:
+                    $ref: '#/definitions/application.Station'
+                  type: array
+                msg:
+                  type: string
+              type: object
+      summary: 获取所有油站列表
+  /user/location:
+    get:
+      consumes:
+      - application/json
+      description: 上传当前位置坐标获取位置信息
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬读
+        in: query
+        name: latitude
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                data:
+                  $ref: '#/definitions/application.LocalArea'
+                msg:
+                  type: string
+              type: object
+      summary: 获取当前位置
+  /user/profile:
+    get:
+      consumes:
+      - application/json
+      description: 获取用户信息
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬读
+        in: query
+        name: latitude
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                data:
+                  $ref: '#/definitions/application.UserRecordRes'
+                msg:
+                  type: string
+              type: object
+      summary: 获取用户信息
+    post:
+      consumes:
+      - application/json
+      description: 更新用户信息
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬读
+        in: query
+        name: latitude
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                msg:
+                  type: string
+              type: object
+      summary: 更新用户信息
+  /user/record:
+    post:
+      consumes:
+      - application/json
+      description: 添加加油记录
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬度
+        in: query
+        name: latitude
+        required: true
+        type: number
+      - description: body data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/application.PetrolRecord'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                msg:
+                  type: string
+              type: object
+      summary: 添加加油记录
+swagger: "2.0"

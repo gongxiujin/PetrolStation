@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,42 +24,76 @@ var ctx = context.Background()
 
 // ----------------小程序api-------------
 // 获取用户信息
+// @Summary 获取用户信息
+// @Description 获取用户信息
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬读"
+// @Success 200 {object} ResponseJson{code=int,msg=string,data=UserRecordRes} "desc"
+// @Router /user/profile [get]
 func GetUserProfile(o *gin.Context) {
-	var pq struct {
-		UserId        int     `json:"user_id"`
-		MinMileage    float64 `json:"min_mileage"`
-		MaxMileage    float64 `json:"max_mileage"`
-		SumVolume     float64 `json:"sum_volume"`
-		MinCreateTime int     `json:"min_create_time"`
-		MaxCreateTime int     `json:"max_create_time"`
-	}
-	var pr struct {
-		LastQtrip float64 `json:"last_qtrip"`
-	}
-	var user Users
-	userStr := o.GetString("User")
-	if err := json.Unmarshal([]byte(userStr), &user); err != nil {
-		PackJSONRESP(o, 5001, "Access denied")
+	user, err := getCurrentUser(o)
+	if err != nil {
+		PackJSONRESP(o, 5001, err.Error())
 		return
 	}
+	var pq ProfileQuery
+	var pr LastQtrip
+
 	DB.Raw("select user_id, min(mileage) min_mileage, max(mileage) max_mileage, sum(volume) sum_volume, min(create_time) min_create_time, max(create_time) max_create_time from petrol_records where user_id=? group by user_id;", user.ID).Scan(&pq)
 	DB.Raw("select max(a.volume)/(max(a.mileage)-min(a.mileage))*100 last_qtrip from (select * from petrol_records where user_id=? order by create_time desc  limit 2) a group by a.user_id;", user.ID).Scan(&pr)
-	res := UserProfileRes{
-		NickName:         user.NickName,
-		HeadImage:        user.Avator,
+	mileage := pq.MaxMileage - pq.MinMileage
+	if pq.MaxMileage == pq.MinMileage && pq.MaxMileage == 0 {
+		mileage = 1.0
+	}
+	res := UserRecordRes{
 		LastQtrip:        pr.LastQtrip,
-		AvgQtrip:         Decimal(pq.SumVolume / (pq.MaxMileage - pq.MinMileage) * 100),
+		AvgQtrip:         Decimal(pq.SumVolume / mileage * 100),
 		AvgTrip:          Decimal((pq.MaxMileage - pq.MinMileage) / float64(GetDiffDaysBySecond(pq.MaxCreateTime, pq.MinCreateTime))),
 		RealMileage:      pq.MaxMileage,
 		LastMileage:      pq.MaxMileage,
 		CumulativeDosage: pq.SumVolume,
 	}
+	res.NickName = user.NickName
+	res.HeadImage = user.Avator
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "查询成功",
 		Data: res,
 	})
 
+}
+
+// 更新用户信息
+// @Summary 更新用户信息
+// @Description 更新用户信息
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬读"
+// @Success 200 {object} ResponseJson{code=int,msg=string} "desc"
+// @Router /user/profile [post]
+func UpdateUserProfile(o *gin.Context) {
+	user, err := getCurrentUser(o)
+	if err != nil {
+		PackJSONRESP(o, 5001, err.Error())
+		return
+	}
+	var body UserProfile
+	if err = o.ShouldBindJSON(&body); err != nil {
+		PackJSONRESP(o, 5001, err.Error())
+		return
+	}
+	user.NickName = body.NickName
+	user.Avator = body.HeadImage
+	DB.Save(user)
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "更新成功",
+	})
 }
 
 // 小程序登录
@@ -96,7 +131,9 @@ func AuthLogin(o *gin.Context) {
 			Latitude:  0,
 		}
 		DB.Create(&user)
-		err = logUserTrack(o.Request.Header, &user)
+		longitude := o.DefaultQuery("longitude", "")
+		latitude := o.DefaultQuery("latitude", "")
+		err = logUserTrack(longitude, latitude, &user)
 	}
 
 	token, err := getUserToken(user.ID)
@@ -109,7 +146,16 @@ func AuthLogin(o *gin.Context) {
 	})
 }
 
-//每日油价
+// 获取每日油价
+// @Summary 每日油价
+// @Description 获取每日油价
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "未读"
+// @Success 200 {object} ResponseJson{code=int,msg=string,data=[]PetrolDaily} "desc"
+// @Router /home/daily_petrol [get]
 func DailyPetrol(o *gin.Context) {
 	var p PetrolPrice
 	var daily []PetrolDaily
@@ -132,7 +178,16 @@ func DailyPetrol(o *gin.Context) {
 	})
 }
 
-// 获取当前位置
+// 根据坐标获取当前位置
+// @Summary 获取当前位置
+// @Description 上传当前位置坐标获取位置信息
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬读"
+// @Success 200 {object} ResponseJson{code=int,msg=string,data=LocalArea} "desc"
+// @Router /user/location [get]
 func GetLocation(o *gin.Context) {
 	user, userErr := getCurrentUser(o)
 	if userErr != nil {
@@ -147,16 +202,26 @@ func GetLocation(o *gin.Context) {
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "查询成功",
-		Data: map[string]interface{}{
-			"country":  country,
-			"province": province,
-			"city":     city,
-			"district": district,
+		Data: LocalArea{
+			Country:  country,
+			Province: province,
+			City:     city,
+			District: district,
 		},
 	})
 }
 
 // 附近加油站
+// @Summary 附近加油站
+// @Description 根据当前位置坐标获取附近加油站
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬度"
+// @Param data body NearbyReq true "body data"
+// @Success 200 {object} ResponseJson{code=int,msg=string,data=[]NearbyStationRes} "desc"
+// @Router /discover/nearby [post]
 func NeighborStation(o *gin.Context) {
 	var body NearbyReq
 	var response []NearbyStationRes
@@ -174,11 +239,15 @@ func NeighborStation(o *gin.Context) {
 		return
 	}
 	var stations []Station
+
+	fmt.Println(fmt.Sprintf("Longitude is: %f, Latitude is: %f", user.Longitude, user.Latitude))
 	// redis中根据远近取出所有的加油站
-	locations, err := Redis.GeoRadius(ctx, "station", user.Longitude, user.Latitude, &redis.GeoRadiusQuery{
+	result := Redis.GeoRadius(ctx, "STATION_NEARBY", user.Longitude, user.Latitude, &redis.GeoRadiusQuery{
 		WithDist: true,
+		Radius:   100,
 		Sort:     "ASC",
-	}).Result()
+	})
+	locations, err := result.Result()
 	if err != nil {
 		PackJSONRESP(o, 4001, "query error: "+err.Error())
 		return
@@ -196,7 +265,7 @@ func NeighborStation(o *gin.Context) {
 		stationIdToDis[location.Name] = location.Dist
 	}
 	// 根据油号、范围内的加油站id、区县找出所有加油站
-	DB.Model(&Station{}).Preload("Petrol", "version = ? and station_id in ()", body.Num, strings.Join(stationIds, ",")).Where("id in (?) and country = ?", strings.Join(stationIds, ",")).Find(&stations)
+	DB.Debug().Model(&Station{}).Where(fmt.Sprintf("id in (%s) and country = '%s'", strings.Join(stationIds, ","), body.Area)).Preload("Petrol", "version = ? ", body.Num).Unscoped().Find(&stations)
 	for _, station := range stations {
 		response = append(response, NearbyStationRes{
 			station,
@@ -219,10 +288,47 @@ func NeighborStation(o *gin.Context) {
 	})
 }
 
+// 获取广告列表
+// @Summary 获取广告列表
+// @Description 获取广告列表
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬度"
+// @Param data body AdvertisingReq true "body data"
+// @Success 200 {object} ResponseJson{code=int,msg=string,data=[]Advertising} "desc"
+// @Router /discover/nearby [post]
+func AdvertisingRequest(o *gin.Context) {
+	var body AdvertisingReq
+	if err := o.ShouldBind(body); err != nil {
+		PackJSONRESP(o, 4001, "参数错误")
+		return
+	}
+	var advertising []Advertising
+	DB.Where("location = ? and Publish = true and type = ?", body.Location, body.Type).Find(&advertising)
+
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "查询成功",
+		Data: advertising,
+	})
+}
+
 // 添加加油记录
+// @Summary 添加加油记录
+// @Description 添加加油记录
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬度"
+// @Param data body PetrolRecord true "body data"
+// @Success 200 {object} ResponseJson{code=int,msg=string} "desc"
+// @Router /user/record [post]
 func AddPetrolRecord(o *gin.Context) {
 	var addRecord PetrolRecord
-	if err := o.Bind(&addRecord); err != nil {
+	if err := o.ShouldBind(addRecord); err != nil {
 		PackJSONRESP(o, 4004, err.Error())
 		return
 	}
@@ -236,6 +342,26 @@ func AddPetrolRecord(o *gin.Context) {
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "插入成功",
+	})
+}
+
+// 获取当前位置
+// @Summary 获取所有可展示的区县
+// @Description 获取所有可展示的区县列表
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬读"
+// @Success 200 {object} ResponseJson{code=int,msg=string,data=[]Area} "desc"
+// @Router /discover/area [get]
+func GetAreaList(o *gin.Context) {
+	var area []Area
+	DB.Raw("select country from stations group by country;").Scan(&area)
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "查询成功",
+		Data: area,
 	})
 }
 
@@ -270,6 +396,17 @@ func WebLogin(o *gin.Context) {
 }
 
 // 加油站列表
+// @Summary 获取所有油站列表
+// @Description 获取所有油站列表
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬读"
+// @Param page query number false "页数" default(1)
+// @Param limit query number false "每页条数" default(10)
+// @Success 200 {object} ResponseJson{code=int,msg=string,data=[]Station} "desc"
+// @Router /station [get]
 func StationList(o *gin.Context) {
 	var stations []Station
 	page := o.DefaultQuery("page", "1")
@@ -377,9 +514,16 @@ func GetAdvertising(o *gin.Context) {
 
 // 删除广告
 func DeleteAdvertising(o *gin.Context) {
+	var advert Advertising
 	ID := o.Param("adverId")
 	adverId, err := strconv.Atoi(ID)
 	if err != nil {
+		PackJSONRESP(o, 4002, err.Error())
+		return
+	}
+	DB.Where("id = ?", adverId).First(&advert)
+	file_path := strings.Replace(advert.Url, STATICFILE, SAVEPATH, -1)
+	if err := os.Remove(file_path); err != nil {
 		PackJSONRESP(o, 4002, err.Error())
 		return
 	}

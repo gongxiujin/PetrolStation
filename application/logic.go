@@ -43,14 +43,14 @@ func (m *GDApiError) Error() string {
 }
 
 type CustomError struct {
-	Err  string
+	Err string
 }
 
 func (c *CustomError) Error() string {
 	return c.Err
 }
 
-func (c *CustomError) setError(e string)  {
+func (c *CustomError) setError(e string) {
 	c.Err = e
 }
 
@@ -66,23 +66,21 @@ func validateAuth(token string) (user Users, err error) {
 	return getUserByToken(token)
 }
 
-func logUserTrack(header http.Header, user *Users) error{
-	longitudeStr := header.Get("longitude")
-	latitudeStr := header.Get("latitude")
-	if longitudeStr == "" || latitudeStr == ""{
+func logUserTrack(longitudeStr, latitudeStr string, user *Users) error {
+	if longitudeStr == "" || latitudeStr == "" {
 		return errors.New("longitude or latitude needed!")
 	}
 	longitude, lngErr := strconv.ParseFloat(longitudeStr, 64)
 	latitude, latErr := strconv.ParseFloat(latitudeStr, 64)
-	if lngErr != nil || latErr != nil{
+	if lngErr != nil || latErr != nil {
 		return errors.New("incorrect format： longitude or latitude!")
 	}
 	user.Longitude = longitude
 	user.Latitude = latitude
 	DB.Save(user)
 	DB.Create(&UserTrack{
-		Longitude:  longitude,
-		Latitude:   latitude,
+		Longitude: longitude,
+		Latitude:  latitude,
 	})
 	return nil
 }
@@ -96,7 +94,7 @@ func AuthenticationToken() gin.HandlerFunc {
 		}
 		user, err := validateAuth(Token)
 		if err != nil {
-			PackJSONRESP(context, 5001, "token parse error: " + err.Error())
+			PackJSONRESP(context, 5001, "token parse error: "+err.Error())
 			return
 		}
 		if user.ID == 0 {
@@ -104,7 +102,9 @@ func AuthenticationToken() gin.HandlerFunc {
 			return
 		}
 		if user.Active {
-			if err = logUserTrack(context.Request.Header, &user); err != nil{
+			longitude := context.DefaultQuery("longitude", "")
+			latitude := context.DefaultQuery("latitude", "")
+			if err = logUserTrack(longitude, latitude, &user); err != nil {
 				PackJSONRESP(context, 5001, err.Error())
 				return
 			}
@@ -228,7 +228,7 @@ func getUserByToken(token string) (user Users, err error) {
 	return user, nil
 }
 
-func getCurrentUser(o *gin.Context) (user *Users, err error){
+func getCurrentUser(o *gin.Context) (user *Users, err error) {
 	userStr := o.GetString("User")
 	if err := json.Unmarshal([]byte(userStr), &user); err != nil {
 		return nil, errors.New("access denied")
@@ -280,5 +280,5 @@ type stationOrderBySmart []NearbyStationRes
 func (a stationOrderBySmart) Len() int      { return len(a) }
 func (a stationOrderBySmart) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a stationOrderBySmart) Less(i, j int) bool {
-	return a[i].Petrol[0].Price*0.7 + a[i].Distance*0.3 > a[j].Petrol[0].Price*0.7 + a[j].Distance*0.3
+	return a[i].Petrol[0].Price*0.7+a[i].Distance*0.3 > a[j].Petrol[0].Price*0.7+a[j].Distance*0.3
 }

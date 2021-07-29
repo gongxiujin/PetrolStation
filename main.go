@@ -2,12 +2,16 @@ package main
 
 import (
 	"fmt"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/gongxiujin/PetrolStation/application"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
-	"github.com/gin-contrib/static"
 	"github.com/rifflock/lfshook"
 	"github.com/sirupsen/logrus"
+	"github.com/swaggo/gin-swagger/swaggerFiles"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	//_ "github.com/swaggo/gin-swagger/example/basic/docs"
+	_ "github.com/gongxiujin/PetrolStation/docs"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"os"
@@ -91,6 +95,7 @@ func loggerMiddleware() gin.HandlerFunc {
 	}
 }
 
+// @BasePath /api/v1
 func main() {
 	router := gin.New()
 	router.Use(loggerMiddleware())
@@ -117,12 +122,15 @@ func main() {
 	authRoute.Use(application.AuthenticationToken())
 	{
 		authRoute.POST("/discover/nearby", application.NeighborStation)
+		authRoute.POST("/home/advertising", application.AdvertisingRequest)
 		authRoute.GET("/station", application.StationList)
 		authRoute.POST("/discover/upgrade/nearby", application.CreateStation)
 		authRoute.PUT("/discover/petrol", application.AddPetrolPrice)
 		authRoute.DELETE("/discover/petrol/:priceId", application.DeletePetrolPrice)
 		authRoute.GET("/home/daily_petrol", application.DailyPetrol)
 		authRoute.GET("/user/profile", application.GetUserProfile)
+		authRoute.POST("/user/profile", application.UpdateUserProfile)
+		authRoute.GET("/discover/area", application.GetAreaList)
 		authRoute.POST("/user/record", application.AddPetrolRecord)
 		authRoute.GET("/advertising", application.GetAdvertising)
 		authRoute.DELETE("/advertising/:adverId", application.DeleteAdvertising)
@@ -130,6 +138,8 @@ func main() {
 		authRoute.PUT("/upload/advertising", application.UploadAdvertisingPic)
 		authRoute.GET("/user/location", application.GetLocation)
 	}
+	//url := ginSwagger.URL("/swagger/doc.json")
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	_ = router.Run()
 }

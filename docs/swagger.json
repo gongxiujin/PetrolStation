@@ -1,0 +1,921 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/discover/area": {
+            "get": {
+                "description": "获取所有可展示的区县列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "获取所有可展示的区县",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬读",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/application.Area"
+                                            }
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/discover/nearby": {
+            "post": {
+                "description": "获取广告列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "获取广告列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬度",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "body data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/application.AdvertisingReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/application.Advertising"
+                                            }
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/home/daily_petrol": {
+            "get": {
+                "description": "获取每日油价",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "每日油价",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "未读",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/application.PetrolDaily"
+                                            }
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/station": {
+            "get": {
+                "description": "获取所有油站列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "获取所有油站列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬读",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "default": 1,
+                        "description": "页数",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "default": 10,
+                        "description": "每页条数",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/application.Station"
+                                            }
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/user/location": {
+            "get": {
+                "description": "上传当前位置坐标获取位置信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "获取当前位置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬读",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "$ref": "#/definitions/application.LocalArea"
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/user/profile": {
+            "get": {
+                "description": "获取用户信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "获取用户信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬读",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "$ref": "#/definitions/application.UserRecordRes"
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "更新用户信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "更新用户信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬读",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/user/record": {
+            "post": {
+                "description": "添加加油记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "添加加油记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬度",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "body data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/application.PetrolRecord"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "application.Advertising": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "description": "内容，图片为跳转连接，文字为内容",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "可忽略",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "ID",
+                    "type": "integer"
+                },
+                "location": {
+                    "description": "位置，home 首页 display 发现页",
+                    "type": "string",
+                    "enum": [
+                        "home",
+                        "display"
+                    ]
+                },
+                "publish": {
+                    "description": "是否展示，可忽略",
+                    "type": "boolean"
+                },
+                "type": {
+                    "description": "类型 advertising图片广告,notice 文字通知,carousel 轮播图",
+                    "type": "string",
+                    "enum": [
+                        "advertising",
+                        "notice",
+                        "carousel"
+                    ]
+                },
+                "url": {
+                    "description": "图片的真实地址",
+                    "type": "string"
+                }
+            }
+        },
+        "application.AdvertisingReq": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "description": "位置，home 首页 display 发现页",
+                    "type": "string",
+                    "enum": [
+                        "home",
+                        "display"
+                    ]
+                },
+                "type": {
+                    "description": "类型 advertising图片广告,notice 文字通知,carousel 轮播图",
+                    "type": "string",
+                    "enum": [
+                        "advertising",
+                        "notice",
+                        "carousel"
+                    ]
+                }
+            }
+        },
+        "application.Area": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "description": "区域",
+                    "type": "string"
+                }
+            }
+        },
+        "application.LocalArea": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "description": "市",
+                    "type": "string"
+                },
+                "country": {
+                    "description": "国家",
+                    "type": "string"
+                },
+                "district": {
+                    "description": "区县",
+                    "type": "string"
+                },
+                "province": {
+                    "description": "省份",
+                    "type": "string"
+                }
+            }
+        },
+        "application.NearbyReq": {
+            "type": "object",
+            "properties": {
+                "area": {
+                    "description": "县:\n* price - 价格\n* distance - 距离\n* smart - 智能",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "汽油号:",
+                    "type": "string",
+                    "enum": [
+                        "92",
+                        "95",
+                        "98",
+                        "0"
+                    ]
+                },
+                "order_by": {
+                    "description": "排序方式:\n* price - 价格\n* distance - 距离\n* smart - 智能",
+                    "type": "string",
+                    "enum": [
+                        "price",
+                        "distance",
+                        "smart"
+                    ]
+                }
+            }
+        },
+        "application.NearbyStationRes": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "详细地址",
+                    "type": "string"
+                },
+                "city": {
+                    "description": "市",
+                    "type": "string"
+                },
+                "country": {
+                    "description": "县",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "distance": {
+                    "description": "距离/ km",
+                    "type": "number"
+                },
+                "id": {
+                    "description": "id:",
+                    "type": "integer"
+                },
+                "latitude": {
+                    "description": "维度",
+                    "type": "number"
+                },
+                "logo": {
+                    "description": "加油站logo",
+                    "type": "string"
+                },
+                "longitude": {
+                    "description": "经度",
+                    "type": "number"
+                },
+                "name": {
+                    "description": "加油站名字",
+                    "type": "string"
+                },
+                "petrol": {
+                    "description": "油价信息",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/application.PetrolPrice"
+                    }
+                },
+                "phone": {
+                    "description": "电话",
+                    "type": "string"
+                },
+                "province": {
+                    "description": "省份",
+                    "type": "string",
+                    "example": "省份"
+                }
+            }
+        },
+        "application.PetrolDaily": {
+            "type": "object",
+            "properties": {
+                "createTime": {
+                    "description": "创建时间, 忽略",
+                    "type": "integer"
+                },
+                "day": {
+                    "description": "日期，忽略",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "id",
+                    "type": "integer"
+                },
+                "price": {
+                    "description": "价格",
+                    "type": "number"
+                },
+                "province": {
+                    "description": "省份，忽略",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "油号",
+                    "type": "string"
+                }
+            }
+        },
+        "application.PetrolPrice": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "day": {
+                    "description": "天，忽略",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "id 可以忽略",
+                    "type": "integer"
+                },
+                "price": {
+                    "description": "价格",
+                    "type": "number"
+                },
+                "station_id": {
+                    "description": "可以忽略",
+                    "type": "integer"
+                },
+                "version": {
+                    "description": "油号",
+                    "type": "string"
+                }
+            }
+        },
+        "application.PetrolRecord": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "id",
+                    "type": "integer"
+                },
+                "mileage": {
+                    "description": "当前公里数",
+                    "type": "number"
+                },
+                "price": {
+                    "description": "单价",
+                    "type": "number"
+                },
+                "station_id": {
+                    "description": "加油站id",
+                    "type": "integer"
+                },
+                "userId": {
+                    "description": "用户id",
+                    "type": "integer"
+                },
+                "version": {
+                    "description": "油号",
+                    "type": "string"
+                },
+                "volume": {
+                    "description": "加油的体积",
+                    "type": "number"
+                }
+            }
+        },
+        "application.ResponseJson": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "object"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "application.Station": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "详细地址",
+                    "type": "string"
+                },
+                "city": {
+                    "description": "市",
+                    "type": "string"
+                },
+                "country": {
+                    "description": "县",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "id:",
+                    "type": "integer"
+                },
+                "latitude": {
+                    "description": "维度",
+                    "type": "number"
+                },
+                "logo": {
+                    "description": "加油站logo",
+                    "type": "string"
+                },
+                "longitude": {
+                    "description": "经度",
+                    "type": "number"
+                },
+                "name": {
+                    "description": "加油站名字",
+                    "type": "string"
+                },
+                "petrol": {
+                    "description": "油价信息",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/application.PetrolPrice"
+                    }
+                },
+                "phone": {
+                    "description": "电话",
+                    "type": "string"
+                },
+                "province": {
+                    "description": "省份",
+                    "type": "string",
+                    "example": "省份"
+                }
+            }
+        },
+        "application.UserRecordRes": {
+            "type": "object",
+            "properties": {
+                "avg_qtrip": {
+                    "description": "平均油耗",
+                    "type": "number"
+                },
+                "avg_trip": {
+                    "description": "平均行程",
+                    "type": "number"
+                },
+                "cumulative_dosage": {
+                    "description": "累计加油量",
+                    "type": "number"
+                },
+                "head_image": {
+                    "description": "头像",
+                    "type": "string"
+                },
+                "last_mileage": {
+                    "description": "统计里程数",
+                    "type": "number"
+                },
+                "last_qtrip": {
+                    "description": "最近油耗",
+                    "type": "number"
+                },
+                "nick_name": {
+                    "description": "昵称",
+                    "type": "string"
+                },
+                "real_mileage": {
+                    "description": "表显里程",
+                    "type": "number"
+                }
+            }
+        }
+    }
+}
