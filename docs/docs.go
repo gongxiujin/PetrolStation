@@ -90,6 +90,79 @@ var doc = `{
         },
         "/discover/nearby": {
             "post": {
+                "description": "根据当前位置坐标获取附近加油站",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "附近加油站",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬度",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "body data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/application.NearbyReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/application.NearbyStationRes"
+                                            }
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/home/advertising": {
+            "post": {
                 "description": "获取广告列表",
                 "consumes": [
                     "application/json"
@@ -454,6 +527,15 @@ var doc = `{
                         "name": "latitude",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "description": "body data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/application.UserProfile"
+                        }
                     }
                 ],
                 "responses": {
@@ -648,7 +730,7 @@ var doc = `{
             "type": "object",
             "properties": {
                 "area": {
-                    "description": "县:\n* price - 价格\n* distance - 距离\n* smart - 智能",
+                    "description": "县，接口获取:",
                     "type": "string"
                 },
                 "num": {
@@ -828,6 +910,35 @@ var doc = `{
                 }
             }
         },
+        "application.PetrolRecordRes": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "加油时间",
+                    "type": "integer"
+                },
+                "mileage": {
+                    "description": "里程数",
+                    "type": "number"
+                },
+                "name": {
+                    "description": "加油站名称",
+                    "type": "string"
+                },
+                "price": {
+                    "description": "价格",
+                    "type": "number"
+                },
+                "version": {
+                    "description": "油号",
+                    "type": "string"
+                },
+                "volume": {
+                    "description": "体积",
+                    "type": "number"
+                }
+            }
+        },
         "application.ResponseJson": {
             "type": "object",
             "properties": {
@@ -899,6 +1010,19 @@ var doc = `{
                 }
             }
         },
+        "application.UserProfile": {
+            "type": "object",
+            "properties": {
+                "head_image": {
+                    "description": "头像",
+                    "type": "string"
+                },
+                "nick_name": {
+                    "description": "昵称",
+                    "type": "string"
+                }
+            }
+        },
         "application.UserRecordRes": {
             "type": "object",
             "properties": {
@@ -933,6 +1057,13 @@ var doc = `{
                 "real_mileage": {
                     "description": "表显里程",
                     "type": "number"
+                },
+                "records": {
+                    "description": "加油记录",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/application.PetrolRecordRes"
+                    }
                 }
             }
         }

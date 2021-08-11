@@ -71,11 +71,7 @@ definitions:
   application.NearbyReq:
     properties:
       area:
-        description: |-
-          县:
-          * price - 价格
-          * distance - 距离
-          * smart - 智能
+        description: '县，接口获取:'
         type: string
       num:
         description: '汽油号:'
@@ -211,6 +207,27 @@ definitions:
         description: 加油的体积
         type: number
     type: object
+  application.PetrolRecordRes:
+    properties:
+      create_time:
+        description: 加油时间
+        type: integer
+      mileage:
+        description: 里程数
+        type: number
+      name:
+        description: 加油站名称
+        type: string
+      price:
+        description: 价格
+        type: number
+      version:
+        description: 油号
+        type: string
+      volume:
+        description: 体积
+        type: number
+    type: object
   application.ResponseJson:
     properties:
       code:
@@ -262,6 +279,15 @@ definitions:
         example: 省份
         type: string
     type: object
+  application.UserProfile:
+    properties:
+      head_image:
+        description: 头像
+        type: string
+      nick_name:
+        description: 昵称
+        type: string
+    type: object
   application.UserRecordRes:
     properties:
       avg_qtrip:
@@ -288,6 +314,11 @@ definitions:
       real_mileage:
         description: 表显里程
         type: number
+      records:
+        description: 加油记录
+        items:
+          $ref: '#/definitions/application.PetrolRecordRes'
+        type: array
     type: object
 info:
   contact: {}
@@ -333,6 +364,52 @@ paths:
               type: object
       summary: 获取所有可展示的区县
   /discover/nearby:
+    post:
+      consumes:
+      - application/json
+      description: 根据当前位置坐标获取附近加油站
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬度
+        in: query
+        name: latitude
+        required: true
+        type: number
+      - description: body data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/application.NearbyReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                data:
+                  items:
+                    $ref: '#/definitions/application.NearbyStationRes'
+                  type: array
+                msg:
+                  type: string
+              type: object
+      summary: 附近加油站
+  /home/advertising:
     post:
       consumes:
       - application/json
@@ -564,6 +641,12 @@ paths:
         name: latitude
         required: true
         type: number
+      - description: body data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/application.UserProfile'
       produces:
       - application/json
       responses:

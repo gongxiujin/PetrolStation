@@ -35,19 +35,36 @@ var ctx = context.Background()
 // @Router /user/profile [get]
 func GetUserProfile(o *gin.Context) {
 	user, err := getCurrentUser(o)
+	var records []PetrolRecordRes
 	if err != nil {
 		PackJSONRESP(o, 5001, err.Error())
 		return
 	}
+	var count int64
 	var pq ProfileQuery
 	var pr LastQtrip
-
-	DB.Raw("select user_id, min(mileage) min_mileage, max(mileage) max_mileage, sum(volume) sum_volume, min(create_time) min_create_time, max(create_time) max_create_time from petrol_records where user_id=? group by user_id;", user.ID).Scan(&pq)
-	DB.Raw("select max(a.volume)/(max(a.mileage)-min(a.mileage))*100 last_qtrip from (select * from petrol_records where user_id=? order by create_time desc  limit 2) a group by a.user_id;", user.ID).Scan(&pr)
-	mileage := pq.MaxMileage - pq.MinMileage
-	if pq.MaxMileage == pq.MinMileage && pq.MaxMileage == 0 {
+	var mileage float64
+	DB.Model(&PetrolRecord{}).Where("user_id = ?", user.ID).Count(&count)
+	if count > 1 {
+		DB.Debug().Raw("select user_id, min(mileage) min_mileage, max(mileage) max_mileage, sum(volume) sum_volume, min(create_time) min_create_time, max(create_time) max_create_time from petrol_records where user_id=? group by user_id;", user.ID).Scan(&pq)
+		DB.Debug().Raw("select max(a.volume)/(max(a.mileage)-min(a.mileage))*100 last_qtrip from (select * from petrol_records where user_id=? order by create_time desc  limit 2) a group by a.user_id;", user.ID).Scan(&pr)
+		mileage = pq.MaxMileage - pq.MinMileage
+		if pq.MaxMileage == pq.MinMileage && pq.MaxMileage == 0 {
+			mileage = 1.0
+		}
+	} else {
+		pq = ProfileQuery{
+			UserId:        0,
+			MinMileage:    0,
+			MaxMileage:    0,
+			SumVolume:     0,
+			MinCreateTime: 0,
+			MaxCreateTime: 0,
+		}
+		pr = LastQtrip{LastQtrip: 0}
 		mileage = 1.0
 	}
+	DB.Raw("select pr.version, pr.volume, pr.price, pr.mileage, s.name, pr.create_time from petrol_records pr left join stations s on pr.station_id=s.id where pr.user_id = ?;", user.ID).Scan(&records)
 	res := UserRecordRes{
 		LastQtrip:        pr.LastQtrip,
 		AvgQtrip:         Decimal(pq.SumVolume / mileage * 100),
@@ -55,6 +72,7 @@ func GetUserProfile(o *gin.Context) {
 		RealMileage:      pq.MaxMileage,
 		LastMileage:      pq.MaxMileage,
 		CumulativeDosage: pq.SumVolume,
+		Records:          records,
 	}
 	res.NickName = user.NickName
 	res.HeadImage = user.Avator
@@ -74,6 +92,7 @@ func GetUserProfile(o *gin.Context) {
 // @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
 // @Param longitude query number true "经度"
 // @Param latitude query number true "纬读"
+// @Param data body UserProfile true "body data"
 // @Success 200 {object} ResponseJson{code=int,msg=string} "desc"
 // @Router /user/profile [post]
 func UpdateUserProfile(o *gin.Context) {
@@ -298,11 +317,11 @@ func NeighborStation(o *gin.Context) {
 // @Param latitude query number true "纬度"
 // @Param data body AdvertisingReq true "body data"
 // @Success 200 {object} ResponseJson{code=int,msg=string,data=[]Advertising} "desc"
-// @Router /discover/nearby [post]
+// @Router /home/advertising [post]
 func AdvertisingRequest(o *gin.Context) {
 	var body AdvertisingReq
-	if err := o.ShouldBind(body); err != nil {
-		PackJSONRESP(o, 4001, "参数错误")
+	if err := o.ShouldBind(&body); err != nil {
+		PackJSONRESP(o, 4001, "参数错误: "+err.Error())
 		return
 	}
 	var advertising []Advertising
@@ -328,7 +347,7 @@ func AdvertisingRequest(o *gin.Context) {
 // @Router /user/record [post]
 func AddPetrolRecord(o *gin.Context) {
 	var addRecord PetrolRecord
-	if err := o.ShouldBind(addRecord); err != nil {
+	if err := o.ShouldBind(&addRecord); err != nil {
 		PackJSONRESP(o, 4004, err.Error())
 		return
 	}
@@ -409,6 +428,14 @@ func WebLogin(o *gin.Context) {
 // @Router /station [get]
 func StationList(o *gin.Context) {
 	var stations []Station
+	//var searchReq StationSearch
+	//if err :=o.ShouldBindJSON(&searchReq);err!= nil{
+	//	PackJSONRESP(o, 4001, "param error")
+	//	return
+	//}
+	//if searchReq.Name != "" {
+	//
+	//}
 	page := o.DefaultQuery("page", "1")
 	perPage := o.DefaultQuery("limit", "10")
 	pageInt, err := strconv.Atoi(page)
