@@ -8,4 +8,6 @@ front/node_modules
 front/dist
 front/.idea
 /vendor
-./orm.db
+orm.db
+/front/node_modules/
+/front/dist/
