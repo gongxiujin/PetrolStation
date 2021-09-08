@@ -33,6 +33,7 @@ type PetrolPrice struct {
 	StationID uint `json:"station_id" swaggertype:"integer" gorm:"index"` // 可以忽略
 	Version string `json:"version" swaggertype:"string"` // 油号
 	Price float64 `json:"price" swaggertype:"number"` // 价格
+	Vip float64 `json:"vip" swaggertype:"number"` // 会员价
 	Day        string `json:"day" swaggertype:"string"` // 天，忽略
 	CreateTime int64  `json:"create_time" swaggertype:"integer" gorm:"autoCreateTime"` // 创建时间
 }
@@ -62,14 +63,14 @@ type Users struct {
 }
 
 type PetrolRecord struct {
-	ID         int     `gorm:"column:id;primaryKey"` // id
-	UserId     int     `gorm:"index"` // 用户id
-	Volume     float64 `json:"volume" gorm:"column:volume"` // 加油的体积
-	Price      float64 `json:"price" gorm:"column:price"` // 单价
-	StationId  uint    `json:"station_id" gorm:"column:station_id"` // 加油站id
+	ID         int     `gorm:"column:id;primaryKey"` // id，不用填
+	UserId     int     `gorm:"index"` // 用户id，不用填
+	Volume     float64 `json:"volume" gorm:"column:volume"` // 加油的体积，3.3
+	Price      float64 `json:"price" gorm:"column:price"` // 单价，2.1
+	StationId  uint    `json:"station_id" gorm:"column:station_id"` // 加油站id，
 	Version    string  `json:"version" gorm:"column:version"` // 油号
 	Mileage    float64 `json:"mileage" gorm:"column:mileage"` // 当前公里数
-	CreateTime int     `json:"create_time" gorm:"column:create_time;autoCreateTime"` // 创建时间
+	CreateTime int     `json:"create_time" gorm:"column:create_time;autoCreateTime"` // 创建时间，不填默认当前时间
 }
 
 type UserTrack struct {

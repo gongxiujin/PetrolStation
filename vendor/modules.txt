@@ -112,7 +112,6 @@ github.com/sirupsen/logrus
 # github.com/swaggo/gin-swagger v1.3.0
 ## explicit
 github.com/swaggo/gin-swagger
-github.com/swaggo/gin-swagger/example/basic/docs
 github.com/swaggo/gin-swagger/swaggerFiles
 # github.com/swaggo/swag v1.7.0
 ## explicit
@@ -121,6 +120,9 @@ github.com/swaggo/swag
 ## explicit
 # github.com/ugorji/go/codec v1.2.6
 github.com/ugorji/go/codec
+# github.com/unrolled/secure v1.0.9
+## explicit
+github.com/unrolled/secure
 # go.opentelemetry.io/otel v0.20.0
 go.opentelemetry.io/otel/attribute
 go.opentelemetry.io/otel/codes

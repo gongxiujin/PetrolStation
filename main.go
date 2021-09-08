@@ -10,6 +10,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/unrolled/secure"
+	"strconv"
+
 	//_ "github.com/swaggo/gin-swagger/example/basic/docs"
 	_ "github.com/gongxiujin/PetrolStation/docs"
 	"gorm.io/driver/sqlite"
@@ -124,6 +127,7 @@ func main() {
 		authRoute.POST("/discover/nearby", application.NeighborStation)
 		authRoute.POST("/home/advertising", application.AdvertisingRequest)
 		authRoute.GET("/station", application.StationList)
+		authRoute.DELETE("/station/:stationId", application.DeleteStation)
 		authRoute.POST("/discover/upgrade/nearby", application.CreateStation)
 		authRoute.PUT("/discover/petrol", application.AddPetrolPrice)
 		authRoute.DELETE("/discover/petrol/:priceId", application.DeletePetrolPrice)
@@ -132,14 +136,33 @@ func main() {
 		authRoute.POST("/user/profile", application.UpdateUserProfile)
 		authRoute.GET("/discover/area", application.GetAreaList)
 		authRoute.POST("/user/record", application.AddPetrolRecord)
+		authRoute.DELETE("/user/record", application.DeletePetrolRecord)
 		authRoute.GET("/advertising", application.GetAdvertising)
 		authRoute.DELETE("/advertising/:adverId", application.DeleteAdvertising)
 		authRoute.POST("/advertising", application.UpdateAdvertising)
 		authRoute.PUT("/upload/advertising", application.UploadAdvertisingPic)
 		authRoute.GET("/user/location", application.GetLocation)
+		authRoute.GET("/discover/share_info", application.ShareInfo)
 	}
 	//url := ginSwagger.URL("/swagger/doc.json")
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.Use(TlsHandler(443))
+	_ = router.RunTLS(":443", "6184596_www.jryjcx.cn.pem", "6184596_www.jryjcx.cn.key")
+}
 
-	_ = router.Run()
+func TlsHandler(port int) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		secureMiddleware := secure.New(secure.Options{
+			SSLRedirect: true,
+			SSLHost:     ":" + strconv.Itoa(port),
+		})
+		err := secureMiddleware.Process(c.Writer, c.Request)
+
+		// If there was an error, do not continue.
+		if err != nil {
+			return
+		}
+
+		c.Next()
+	}
 }

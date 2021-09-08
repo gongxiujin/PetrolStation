@@ -53,6 +53,12 @@ definitions:
         description: 区域
         type: string
     type: object
+  application.DeleteRecordReq:
+    properties:
+      id:
+        description: 加油记录
+        type: integer
+    type: object
   application.LocalArea:
     properties:
       city:
@@ -179,32 +185,35 @@ definitions:
       version:
         description: 油号
         type: string
+      vip:
+        description: 会员价
+        type: number
     type: object
   application.PetrolRecord:
     properties:
       create_time:
-        description: 创建时间
+        description: 创建时间，不填默认当前时间
         type: integer
       id:
-        description: id
+        description: id，不用填
         type: integer
       mileage:
         description: 当前公里数
         type: number
       price:
-        description: 单价
+        description: 单价，2.1
         type: number
       station_id:
-        description: 加油站id
+        description: 加油站id，
         type: integer
       userId:
-        description: 用户id
+        description: 用户id，不用填
         type: integer
       version:
         description: 油号
         type: string
       volume:
-        description: 加油的体积
+        description: 加油的体积，3.3
         type: number
     type: object
   application.PetrolRecordRes:
@@ -235,6 +244,15 @@ definitions:
       data:
         type: object
       msg:
+        type: string
+    type: object
+  application.ShareInfoRes:
+    properties:
+      img:
+        description: 图片
+        type: string
+      msg:
+        description: 内容
         type: string
     type: object
   application.Station:
@@ -409,6 +427,46 @@ paths:
                   type: string
               type: object
       summary: 附近加油站
+  /discover/share_info:
+    get:
+      consumes:
+      - application/json
+      description: 获取分享的文案和图片
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬读
+        in: query
+        name: latitude
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                data:
+                  items:
+                    $ref: '#/definitions/application.ShareInfoRes'
+                  type: array
+                msg:
+                  type: string
+              type: object
+      summary: 获取分享详情
   /home/advertising:
     post:
       consumes:
@@ -666,7 +724,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: 添加加油记录
+      description: 删除加油记录
       parameters:
       - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
         in: header
@@ -688,7 +746,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/application.PetrolRecord'
+          $ref: '#/definitions/application.DeleteRecordReq'
       produces:
       - application/json
       responses:
@@ -703,5 +761,5 @@ paths:
                 msg:
                   type: string
               type: object
-      summary: 添加加油记录
+      summary: 删除加油记录
 swagger: "2.0"

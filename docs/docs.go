@@ -161,6 +161,70 @@ var doc = `{
                 }
             }
         },
+        "/discover/share_info": {
+            "get": {
+                "description": "获取分享的文案和图片",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "获取分享详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬读",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/application.ShareInfoRes"
+                                            }
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/home/advertising": {
             "post": {
                 "description": "获取广告列表",
@@ -565,14 +629,14 @@ var doc = `{
         },
         "/user/record": {
             "post": {
-                "description": "添加加油记录",
+                "description": "删除加油记录",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "添加加油记录",
+                "summary": "删除加油记录",
                 "parameters": [
                     {
                         "type": "string",
@@ -601,7 +665,7 @@ var doc = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/application.PetrolRecord"
+                            "$ref": "#/definitions/application.DeleteRecordReq"
                         }
                     }
                 ],
@@ -702,6 +766,15 @@ var doc = `{
                 "country": {
                     "description": "区域",
                     "type": "string"
+                }
+            }
+        },
+        "application.DeleteRecordReq": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "加油记录",
+                    "type": "integer"
                 }
             }
         },
@@ -870,6 +943,10 @@ var doc = `{
                 "version": {
                     "description": "油号",
                     "type": "string"
+                },
+                "vip": {
+                    "description": "会员价",
+                    "type": "number"
                 }
             }
         },
@@ -877,11 +954,11 @@ var doc = `{
             "type": "object",
             "properties": {
                 "create_time": {
-                    "description": "创建时间",
+                    "description": "创建时间，不填默认当前时间",
                     "type": "integer"
                 },
                 "id": {
-                    "description": "id",
+                    "description": "id，不用填",
                     "type": "integer"
                 },
                 "mileage": {
@@ -889,15 +966,15 @@ var doc = `{
                     "type": "number"
                 },
                 "price": {
-                    "description": "单价",
+                    "description": "单价，2.1",
                     "type": "number"
                 },
                 "station_id": {
-                    "description": "加油站id",
+                    "description": "加油站id，",
                     "type": "integer"
                 },
                 "userId": {
-                    "description": "用户id",
+                    "description": "用户id，不用填",
                     "type": "integer"
                 },
                 "version": {
@@ -905,7 +982,7 @@ var doc = `{
                     "type": "string"
                 },
                 "volume": {
-                    "description": "加油的体积",
+                    "description": "加油的体积，3.3",
                     "type": "number"
                 }
             }
@@ -949,6 +1026,19 @@ var doc = `{
                     "type": "object"
                 },
                 "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "application.ShareInfoRes": {
+            "type": "object",
+            "properties": {
+                "img": {
+                    "description": "图片",
+                    "type": "string"
+                },
+                "msg": {
+                    "description": "内容",
                     "type": "string"
                 }
             }

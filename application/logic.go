@@ -264,7 +264,7 @@ type stationOrderByPrice []NearbyStationRes
 func (a stationOrderByPrice) Len() int      { return len(a) }
 func (a stationOrderByPrice) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a stationOrderByPrice) Less(i, j int) bool {
-	return a[i].Petrol[0].Price > a[j].Petrol[0].Price
+	return a[i].Petrol[0].Price < a[j].Petrol[0].Price
 }
 
 type stationOrderByDistance []NearbyStationRes
@@ -272,7 +272,7 @@ type stationOrderByDistance []NearbyStationRes
 func (a stationOrderByDistance) Len() int      { return len(a) }
 func (a stationOrderByDistance) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a stationOrderByDistance) Less(i, j int) bool {
-	return a[i].Distance > a[j].Distance
+	return a[i].Distance < a[j].Distance
 }
 
 type stationOrderBySmart []NearbyStationRes
@@ -280,5 +280,5 @@ type stationOrderBySmart []NearbyStationRes
 func (a stationOrderBySmart) Len() int      { return len(a) }
 func (a stationOrderBySmart) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a stationOrderBySmart) Less(i, j int) bool {
-	return a[i].Petrol[0].Price*0.7+a[i].Distance*0.3 > a[j].Petrol[0].Price*0.7+a[j].Distance*0.3
+	return a[i].Petrol[0].Price*0.7+a[i].Distance*0.3 < a[j].Petrol[0].Price*0.7+a[j].Distance*0.3
 }

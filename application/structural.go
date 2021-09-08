@@ -24,6 +24,15 @@ type PetrolRecordRes struct {
 	CreateTime int     `json:"create_time"` // 加油时间
 }
 
+type ShareInfoRes struct {
+	Msg     string `json:"msg"`      // 内容
+	Img    string  `json:"img"`     // 图片
+}
+
+type DeleteRecordReq struct {
+	Id int `json:"id"` // 加油记录
+}
+
 type UserRecordRes struct {
 	UserProfile
 	LastQtrip        float64           `json:"last_qtrip"`        // 最近油耗

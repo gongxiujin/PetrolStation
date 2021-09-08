@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
+	"math/rand"
 	"os"
 	"sort"
 	"strconv"
@@ -114,6 +115,7 @@ func UpdateUserProfile(o *gin.Context) {
 		Msg:  "更新成功",
 	})
 }
+
 
 // 小程序登录
 func AuthLogin(o *gin.Context) {
@@ -364,6 +366,35 @@ func AddPetrolRecord(o *gin.Context) {
 	})
 }
 
+// 删除加油记录
+// @Summary 删除加油记录
+// @Description 删除加油记录
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬度"
+// @Param data body DeleteRecordReq true "body data"
+// @Success 200 {object} ResponseJson{code=int,msg=string} "desc"
+// @Router /user/record [post]
+func DeletePetrolRecord(o *gin.Context) {
+	var delRecord DeleteRecordReq
+	if err := o.ShouldBind(&delRecord); err != nil {
+		PackJSONRESP(o, 4004, err.Error())
+		return
+	}
+	_, err := getCurrentUser(o)
+	if err != nil {
+		PackJSONRESP(o, 5001, "Access denied")
+		return
+	}
+	DB.Where("id = ?", delRecord.Id).Delete(&UserRecordRes{})
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "删除成功",
+	})
+}
+
 // 获取当前位置
 // @Summary 获取所有可展示的区县
 // @Description 获取所有可展示的区县列表
@@ -428,14 +459,6 @@ func WebLogin(o *gin.Context) {
 // @Router /station [get]
 func StationList(o *gin.Context) {
 	var stations []Station
-	//var searchReq StationSearch
-	//if err :=o.ShouldBindJSON(&searchReq);err!= nil{
-	//	PackJSONRESP(o, 4001, "param error")
-	//	return
-	//}
-	//if searchReq.Name != "" {
-	//
-	//}
 	page := o.DefaultQuery("page", "1")
 	perPage := o.DefaultQuery("limit", "10")
 	pageInt, err := strconv.Atoi(page)
@@ -458,6 +481,48 @@ func StationList(o *gin.Context) {
 			"stations": stations,
 			"total":    count,
 		},
+	})
+}
+
+// 删除加油站
+func DeleteStation(o *gin.Context) {
+	ID := o.Param("stationId")
+	stationId, err := strconv.Atoi(ID)
+	if err != nil {
+		PackJSONRESP(o, 4002, err.Error())
+		return
+	}
+	DB.Where("id = ?", stationId).Delete(&Station{})
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "删除成功",
+	})
+}
+
+// 分享详情
+// @Summary 获取分享详情
+// @Description 获取分享的文案和图片
+// @Accept  json
+// @Produce  json
+// @Param Token header string true "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck="
+// @Param longitude query number true "经度"
+// @Param latitude query number true "纬读"
+// @Success 200 {object} ResponseJson{code=int,msg=string,data=[]ShareInfoRes} "desc"
+// @Router /discover/share_info [get]
+func ShareInfo(o *gin.Context) {
+	msgs := []string{"今日油价", "油站优惠信息", "附近油价信息", "众车主共分享", "油价共享，就近加油", "最新油价信息"}
+	images := []string{"/static/img/20210810113859_image.png", "/static/img/20210810113859_image.png", "/static/img/20210810113859_image.png"}
+	rand.Seed(time.Now().Unix())
+	msg := msgs[rand.Intn(len(msgs))]
+	img := images[rand.Intn(len(images))]
+	info := ShareInfoRes{
+		Msg: msg,
+		Img: img,
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "查询成功",
+		Data: info,
 	})
 }
 
@@ -549,10 +614,12 @@ func DeleteAdvertising(o *gin.Context) {
 		return
 	}
 	DB.Where("id = ?", adverId).First(&advert)
-	file_path := strings.Replace(advert.Url, STATICFILE, SAVEPATH, -1)
-	if err := os.Remove(file_path); err != nil {
-		PackJSONRESP(o, 4002, err.Error())
-		return
+	if advert.Url != "" {
+		file_path := strings.Replace(advert.Url, STATICFILE, SAVEPATH, -1)
+		if err := os.Remove(file_path); err != nil {
+			PackJSONRESP(o, 4002, err.Error())
+			return
+		}
 	}
 	DB.Where("id = ?", adverId).Delete(&Advertising{})
 	o.JSON(200, ResponseJson{

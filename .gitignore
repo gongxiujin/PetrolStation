@@ -9,5 +9,7 @@ front/dist
 front/.idea
 /vendor
 orm.db
+station
 /front/node_modules/
 /front/dist/
+/vendor/
