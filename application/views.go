@@ -47,8 +47,8 @@ func GetUserProfile(o *gin.Context) {
 	var mileage float64
 	DB.Model(&PetrolRecord{}).Where("user_id = ?", user.ID).Count(&count)
 	if count > 1 {
-		DB.Debug().Raw("select user_id, min(mileage) min_mileage, max(mileage) max_mileage, sum(volume) sum_volume, min(create_time) min_create_time, max(create_time) max_create_time from petrol_records where user_id=? group by user_id;", user.ID).Scan(&pq)
-		DB.Debug().Raw("select max(a.volume)/(max(a.mileage)-min(a.mileage))*100 last_qtrip from (select * from petrol_records where user_id=? order by create_time desc  limit 2) a group by a.user_id;", user.ID).Scan(&pr)
+		DB.Raw("select user_id, min(mileage) min_mileage, max(mileage) max_mileage, sum(volume) sum_volume, min(create_time) min_create_time, max(create_time) max_create_time from petrol_records where user_id=? group by user_id;", user.ID).Scan(&pq)
+		DB.Raw("select max(a.volume)/(max(a.mileage)-min(a.mileage))*100 last_qtrip from (select * from petrol_records where user_id=? order by create_time desc  limit 2) a group by a.user_id;", user.ID).Scan(&pr)
 		mileage = pq.MaxMileage - pq.MinMileage
 		if pq.MaxMileage == pq.MinMileage && pq.MaxMileage == 0 {
 			mileage = 1.0
@@ -65,13 +65,13 @@ func GetUserProfile(o *gin.Context) {
 		pr = LastQtrip{LastQtrip: 0}
 		mileage = 1.0
 	}
-	DB.Raw("select pr.version, pr.volume, pr.price, pr.mileage, s.name, pr.create_time from petrol_records pr left join stations s on pr.station_id=s.id where pr.user_id = ?;", user.ID).Scan(&records)
+	DB.Raw("select pr.id, pr.version, pr.volume, pr.price, pr.mileage, s.name, pr.create_time from petrol_records pr left join stations s on pr.station_id=s.id where pr.user_id = ? order by pr.id desc;", user.ID).Scan(&records)
 	res := UserRecordRes{
 		LastQtrip:        pr.LastQtrip,
 		AvgQtrip:         Decimal(pq.SumVolume / mileage * 100),
 		AvgTrip:          Decimal((pq.MaxMileage - pq.MinMileage) / float64(GetDiffDaysBySecond(pq.MaxCreateTime, pq.MinCreateTime))),
 		RealMileage:      pq.MaxMileage,
-		LastMileage:      pq.MaxMileage,
+		LastMileage:      Decimal(pq.MaxMileage - pq.MinMileage),
 		CumulativeDosage: pq.SumVolume,
 		Records:          records,
 	}
@@ -178,20 +178,20 @@ func AuthLogin(o *gin.Context) {
 // @Success 200 {object} ResponseJson{code=int,msg=string,data=[]PetrolDaily} "desc"
 // @Router /home/daily_petrol [get]
 func DailyPetrol(o *gin.Context) {
-	var p PetrolPrice
+	//var p PetrolPrice
 	var daily []PetrolDaily
 	result := Redis.Get(ctx, "dailyPetrol")
 	s, _ := result.Result()
 	if err := json.Unmarshal([]byte(s), &daily); err != nil {
 		fmt.Println(err)
 	}
-	DB.Find(&p, "day", time.Now().Format("2016-01-02"))
-	result = Redis.Get(ctx, "DailyInsert")
-	if result.Val() == "1" && p.ID == 0 {
-		DB.Create(&daily)
-		Redis.Del(ctx, "DailyInsert")
-		Logger.Info("delete DailyInsert")
-	}
+	// DB.Find(&p, "day", time.Now().Format("2016-01-02"))
+	// result = Redis.Get(ctx, "DailyInsert")
+	//if result.Val() == "1" && p.ID == 0 {
+	//	DB.Create(&daily)
+	//	Redis.Del(ctx, "DailyInsert")
+	//	Logger.Info("delete DailyInsert")
+	//}
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "查询成功",
@@ -286,7 +286,7 @@ func NeighborStation(o *gin.Context) {
 		stationIdToDis[location.Name] = location.Dist
 	}
 	// 根据油号、范围内的加油站id、区县找出所有加油站
-	DB.Debug().Model(&Station{}).Where(fmt.Sprintf("id in (%s) and country = '%s'", strings.Join(stationIds, ","), body.Area)).Preload("Petrol", "version = ? ", body.Num).Unscoped().Find(&stations)
+	DB.Debug().Model(&Station{}).Where(fmt.Sprintf("id in (%s) and country = '%s' and publish = true", strings.Join(stationIds, ","), body.Area)).Preload("Petrol", "version = ? ", body.Num).Unscoped().Find(&stations)
 	for _, station := range stations {
 		response = append(response, NearbyStationRes{
 			station,
@@ -376,7 +376,7 @@ func AddPetrolRecord(o *gin.Context) {
 // @Param latitude query number true "纬度"
 // @Param data body DeleteRecordReq true "body data"
 // @Success 200 {object} ResponseJson{code=int,msg=string} "desc"
-// @Router /user/record [post]
+// @Router /user/record [delete]
 func DeletePetrolRecord(o *gin.Context) {
 	var delRecord DeleteRecordReq
 	if err := o.ShouldBind(&delRecord); err != nil {
@@ -388,7 +388,7 @@ func DeletePetrolRecord(o *gin.Context) {
 		PackJSONRESP(o, 5001, "Access denied")
 		return
 	}
-	DB.Where("id = ?", delRecord.Id).Delete(&UserRecordRes{})
+	DB.Where("id = ?", delRecord.Id).Delete(&PetrolRecord{})
 	o.JSON(200, ResponseJson{
 		Code: 0,
 		Msg:  "删除成功",
@@ -471,7 +471,7 @@ func StationList(o *gin.Context) {
 		PackJSONRESP(o, 4001, "page error")
 		return
 	}
-	DB.Limit(perPageInt).Offset(pageInt - 1).Preload("Petrol").Find(&stations)
+	DB.Limit(perPageInt).Offset((pageInt-1)*perPageInt).Preload("Petrol").Find(&stations)
 	var count int64
 	DB.Model(&Station{}).Count(&count)
 	o.JSON(200, ResponseJson{
@@ -480,6 +480,26 @@ func StationList(o *gin.Context) {
 		Data: map[string]interface{}{
 			"stations": stations,
 			"total":    count,
+		},
+	})
+}
+
+func UpdateStation(o *gin.Context) {
+	var station Station
+	if err := o.ShouldBind(&station); err != nil {
+		PackJSONRESP(o, 4002, err.Error())
+		return
+	}
+	if station.ID == 0 {
+		DB.Create(&station)
+	} else {
+		DB.Save(&station)
+	}
+	o.JSON(200, ResponseJson{
+		Code: 0,
+		Msg:  "更新成功",
+		Data: map[string]int{
+			"id": int(station.ID),
 		},
 	})
 }

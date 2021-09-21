@@ -127,6 +127,7 @@ func main() {
 		authRoute.POST("/discover/nearby", application.NeighborStation)
 		authRoute.POST("/home/advertising", application.AdvertisingRequest)
 		authRoute.GET("/station", application.StationList)
+		authRoute.POST("/station", application.UpdateStation)
 		authRoute.DELETE("/station/:stationId", application.DeleteStation)
 		authRoute.POST("/discover/upgrade/nearby", application.CreateStation)
 		authRoute.PUT("/discover/petrol", application.AddPetrolPrice)

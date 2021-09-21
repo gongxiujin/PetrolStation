@@ -16,6 +16,7 @@ type UserProfile struct {
 }
 
 type PetrolRecordRes struct {
+	Id         int     `json:"id"`
 	Volume     float64 `json:"volume"`      // 体积
 	Version    string  `json:"version"`     // 油号
 	Price      float64 `json:"price"`       // 价格
@@ -25,8 +26,8 @@ type PetrolRecordRes struct {
 }
 
 type ShareInfoRes struct {
-	Msg     string `json:"msg"`      // 内容
-	Img    string  `json:"img"`     // 图片
+	Msg string `json:"msg"` // 内容
+	Img string `json:"img"` // 图片
 }
 
 type DeleteRecordReq struct {

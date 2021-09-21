@@ -143,6 +143,9 @@ definitions:
         description: 省份
         example: 省份
         type: string
+      publish:
+        description: 是否展示
+        type: boolean
     type: object
   application.PetrolDaily:
     properties:
@@ -221,6 +224,8 @@ definitions:
       create_time:
         description: 加油时间
         type: integer
+      id:
+        type: integer
       mileage:
         description: 里程数
         type: number
@@ -296,6 +301,9 @@ definitions:
         description: 省份
         example: 省份
         type: string
+      publish:
+        description: 是否展示
+        type: boolean
     type: object
   application.UserProfile:
     properties:
@@ -721,7 +729,7 @@ paths:
               type: object
       summary: 更新用户信息
   /user/record:
-    post:
+    delete:
       consumes:
       - application/json
       description: 删除加油记录
@@ -762,4 +770,45 @@ paths:
                   type: string
               type: object
       summary: 删除加油记录
+    post:
+      consumes:
+      - application/json
+      description: 添加加油记录
+      parameters:
+      - description: +Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=
+        in: header
+        name: Token
+        required: true
+        type: string
+      - description: 经度
+        in: query
+        name: longitude
+        required: true
+        type: number
+      - description: 纬度
+        in: query
+        name: latitude
+        required: true
+        type: number
+      - description: body data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/application.PetrolRecord'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: desc
+          schema:
+            allOf:
+            - $ref: '#/definitions/application.ResponseJson'
+            - properties:
+                code:
+                  type: integer
+                msg:
+                  type: string
+              type: object
+      summary: 添加加油记录
 swagger: "2.0"

@@ -629,6 +629,71 @@ var doc = `{
         },
         "/user/record": {
             "post": {
+                "description": "添加加油记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "添加加油记录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "+Q7xeBtwHmvmwhcMU0ZnQZ6N2jboP8wa5z1MIsrfLck=",
+                        "name": "Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "纬度",
+                        "name": "latitude",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "body data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/application.PetrolRecord"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "desc",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/application.ResponseJson"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer"
+                                        },
+                                        "msg": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "delete": {
                 "description": "删除加油记录",
                 "consumes": [
                     "application/json"
@@ -885,6 +950,10 @@ var doc = `{
                     "description": "省份",
                     "type": "string",
                     "example": "省份"
+                },
+                "publish": {
+                    "description": "是否展示",
+                    "type": "boolean"
                 }
             }
         },
@@ -994,6 +1063,9 @@ var doc = `{
                     "description": "加油时间",
                     "type": "integer"
                 },
+                "id": {
+                    "type": "integer"
+                },
                 "mileage": {
                     "description": "里程数",
                     "type": "number"
@@ -1097,6 +1169,10 @@ var doc = `{
                     "description": "省份",
                     "type": "string",
                     "example": "省份"
+                },
+                "publish": {
+                    "description": "是否展示",
+                    "type": "boolean"
                 }
             }
         },

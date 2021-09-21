@@ -18,7 +18,7 @@ def run():
     petrol.astype(float)
     r = list()
     for k, v in petrol.loc['山东'].to_dict().items():
-        r.append({"version": k, "price": v, "day": datetime.datetime.now().strftime("%Y-%m-%d")})
+        r.append({"version": k, "price": float(v), "day": datetime.datetime.now().strftime("%Y-%m-%d")})
     sort_result = ["92", "95", "98", "0"]
     r.sort(key=lambda x: sort_result.index(x.get("version")))
     os.system("redis-cli -n 1 del dailyPetrol")
